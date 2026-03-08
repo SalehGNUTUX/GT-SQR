@@ -1,4 +1,4 @@
-# 📿 GT-SQR — gnutux Short Quran Reels
+# 📿 GT-SQR — GnuTux Short Quran Reels
 
 > صانع ريلز القرآن الكريم المتقدم | Advanced Quran Short Video Generator
 
