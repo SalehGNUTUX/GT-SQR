@@ -1,13 +1,42 @@
 [
-  "Ubuntu Arabic Regular.otf",
-  "Ubuntu Arabic Bold.ttf",
-  "NotoSansArabic-Thin.ttf",
-  "NotoSansArabic-ExtraLight.ttf",
-  "NotoSansArabic-Regular.ttf",
-  "UthmanicHafs1 Ver13.otf",
-  "ArbFONTS-Amiri-Quran.ttf",
-  "ArbFONTS-Amiri Quran.ttf",
-  "amiri-quran-colored.ttf",
-  "amiri-quran.ttf",
-  "(A) Arslan Wessam A (A) Arslan Wessam A.ttf"
+  {
+    "name": "Amiri Quran",
+    "file": "amiri-quran.ttf",
+    "sample": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ"
+  },
+  {
+    "name": "Uthmanic Hafs",
+    "file": "UthmanicHafs1 Ver13.otf",
+    "sample": "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ"
+  },
+  {
+    "name": "Noto Sans Arabic Thin",
+    "file": "NotoSansArabic-Thin.ttf",
+    "sample": "مَالِكِ يَوْمِ الدِّينِ"
+  },
+  {
+    "name": "Noto Sans Arabic ExtraLight",
+    "file": "NotoSansArabic-ExtraLight.ttf",
+    "sample": "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ"
+  },
+  {
+    "name": "Noto Sans Arabic Regular",
+    "file": "NotoSansArabic-Regular.ttf",
+    "sample": "اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ"
+  },
+  {
+    "name": "Ubuntu Arabic Regular",
+    "file": "Ubuntu Arabic Regular.otf",
+    "sample": "صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ"
+  },
+  {
+    "name": "Ubuntu Arabic Bold",
+    "file": "Ubuntu Arabic Bold.ttf",
+    "sample": "غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ"
+  },
+  {
+    "name": "Arslan Wessam",
+    "file": "Arslan Wessam.ttf",
+    "sample": "بِسْمِ اللَّهِ"
+  }
 ]
