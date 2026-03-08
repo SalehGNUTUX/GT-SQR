@@ -6,7 +6,7 @@
   },
   {
     "name": "Uthmanic Hafs",
-    "file": "UthmanicHafs1 Ver13.otf",
+    "file": "UthmanicHafs1%20Ver13.otf",
     "sample": "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ"
   },
   {
@@ -26,17 +26,17 @@
   },
   {
     "name": "Ubuntu Arabic Regular",
-    "file": "Ubuntu Arabic Regular.otf",
+    "file": "Ubuntu%20Arabic%20Regular.otf",
     "sample": "صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ"
   },
   {
     "name": "Ubuntu Arabic Bold",
-    "file": "Ubuntu Arabic Bold.ttf",
+    "file": "Ubuntu%20Arabic%20Bold.ttf",
     "sample": "غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ"
   },
   {
     "name": "Arslan Wessam",
-    "file": "Arslan Wessam.ttf",
+    "file": "Arslan%20Wessam.ttf",
     "sample": "بِسْمِ اللَّهِ"
   }
 ]
