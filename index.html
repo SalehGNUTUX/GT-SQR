@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#040c08">
 <title>GT-SQR — صانع ريلز القرآن الكريم</title>
 <link rel="manifest" href="manifest.json">
-<!-- أيقونات PWA و favicon -->
+<!-- أيقونات PWA و favicon (المسارات الصحيحة) -->
 <link rel="icon" type="image/png" sizes="32x32" href="gt-sqr-icons/32x32/gt-sqr-icon.png">
 <link rel="icon" type="image/png" sizes="16x16" href="gt-sqr-icons/16x16/gt-sqr-icon.png">
 <link rel="apple-touch-icon" href="gt-sqr-icons/192x192/gt-sqr-icon.png">
@@ -16,7 +16,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link id="gfonts" href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Reem+Kufi:wght@400;700&family=Scheherazade+New:wght@400;700&family=Cairo:wght@300;400;600;700;900&family=Noto+Naskh+Arabic:wght@400;700&family=Lateef:wght@400;700&family=Harmattan:wght@400;700&family=Markazi+Text:ital,wght@0,400;0,700&family=Aref+Ruqaa&display=swap" rel="stylesheet">
 <style>
-/* نفس الأنماط السابقة مع إضافة تحسينات بسيطة */
 :root{
   --p:#0a5c36;--pl:#1a8a52;--pd:#063d24;
   --a:#c9a227;--al:#f0c842;--ad:#8c6e16;
@@ -653,7 +652,7 @@ body.offline .offline-badge{display:block}
 </div>
 
 <div id="exbar">
-  <div class="ex-info" id="ex-info">جاهز • التصدير يتضمن صوت الخلفية والمقرئ (إذا دعم CORS)</div>
+  <div class="ex-info" id="ex-info">جاهز • التصدير يتضمن صوت الخلفية فقط (صوت المقرئ لا يدعم التصدير بسبب CORS)</div>
   <button class="btn btn-g bsm" onclick="togglePlay()">👁️ <span>معاينة</span></button>
   <button class="btn btn-p bsm" onclick="startExport('webm')">🎬 <span>WebM</span></button>
   <button class="btn btn-a" onclick="startExport('mp4')">📥 MP4</button>
