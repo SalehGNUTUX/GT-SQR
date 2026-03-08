@@ -2,16 +2,15 @@
 const CACHE = "gt-sqr-v2";
 const STATIC = [
   "./",
-"./index.html",
-"./app.js",
-"./manifest.json",
-"./icon-192.png",
-"./icon-512.png",
-"./gt-sqr-icons/favicon-16.png",
-"./gt-sqr-icons/favicon-32.png",
-"./gt-sqr-icons/512x512/gt-sqr-icon.png",
-"./fonts/fonts.json",
-"https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Reem+Kufi:wght@400;700&family=Scheherazade+New:wght@400;700&family=Cairo:wght@300;400;600;700;900&family=Noto+Naskh+Arabic:wght@400;700&family=Lateef:wght@400;700&family=Harmattan:wght@400;700&family=Markazi+Text:ital,wght@0,400;0,700;1,400&family=Aref+Ruqaa&display=swap"
+  "./index.html",
+  "./app.js",
+  "./manifest.json",
+  "./gt-sqr-icons/16x16/gt-sqr-icon.png",
+  "./gt-sqr-icons/32x32/gt-sqr-icon.png",
+  "./gt-sqr-icons/192x192/gt-sqr-icon.png",
+  "./gt-sqr-icons/512x512/gt-sqr-icon.png",
+  "./fonts/fonts.json",
+  "https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Reem+Kufi:wght@400;700&family=Scheherazade+New:wght@400;700&family=Cairo:wght@300;400;600;700;900&family=Noto+Naskh+Arabic:wght@400;700&family=Lateef:wght@400;700&family=Harmattan:wght@400;700&family=Markazi+Text:ital,wght@0,400;0,700;1,400&family=Aref+Ruqaa&display=swap"
 ];
 
 self.addEventListener("install", e => {
@@ -24,18 +23,17 @@ self.addEventListener("install", e => {
 self.addEventListener("activate", e => {
   e.waitUntil(
     caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
     )
   );
   self.clients.claim();
 });
 
 self.addEventListener("fetch", e => {
-  // Skip cross-origin audio (Quran audio CDN) and API
   if (e.request.url.includes("everyayah.com") || e.request.url.includes("api.alquran.cloud")) {
     e.respondWith(
       fetch(e.request).catch(() =>
-      new Response(JSON.stringify({ error: "offline" }), { headers: { "Content-Type": "application/json" } })
+        new Response(JSON.stringify({ error: "offline" }), { headers: { "Content-Type": "application/json" } })
       )
     );
     return;
