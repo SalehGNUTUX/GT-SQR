@@ -1,29 +1,30 @@
 // ═══════════════════════════════════════════════════════
 //  GT-SQR v2.0 — gnutux Short Quran Reels
 //  Author: SalehGNUTUX | License: GPLv2
+//  آخر تحديث: 2025 - إصلاح شامل للمشاكل
 // ═══════════════════════════════════════════════════════
 "use strict";
 
 // ── RECITERS REGISTRY ──────────────────────────────────
 const RECITERS_LIST = [
   { id: "alafasy",  name: "مشاري العفاسي",        flag: "🇰🇼", folder: "Alafasy_128kbps" },
-{ id: "ghamdi",   name: "سعد الغامدي",           flag: "🇸🇦", folder: "Ghamdi_40kbps" },
-{ id: "minshawi", name: "المنشاوي مرتل",         flag: "🇪🇬", folder: "Minshawy_Murattal_128kbps" },
-{ id: "husary",   name: "محمود الحصري",          flag: "🇪🇬", folder: "Husary_128kbps" },
-{ id: "shaatri",  name: "أبو بكر الشاطري",       flag: "🇸🇦", folder: "abu_bakr_ash-shaatree_128kbps" },
-{ id: "maher",    name: "ماهر المعيقلي",         flag: "🇸🇦", folder: "MaherAlMuaiqly128kbps" },
+  { id: "ghamdi",   name: "سعد الغامدي",           flag: "🇸🇦", folder: "Ghamdi_40kbps" },
+  { id: "minshawi", name: "المنشاوي مرتل",         flag: "🇪🇬", folder: "Minshawy_Murattal_128kbps" },
+  { id: "husary",   name: "محمود الحصري",          flag: "🇪🇬", folder: "Husary_128kbps" },
+  { id: "shaatri",  name: "أبو بكر الشاطري",       flag: "🇸🇦", folder: "abu_bakr_ash-shaatree_128kbps" },
+  { id: "maher",    name: "ماهر المعيقلي",         flag: "🇸🇦", folder: "MaherAlMuaiqly128kbps" },
 ];
 
 const BUILT_IN_FONTS = [
   { id: "amiri",     name: "Amiri Quran",     css: "'Amiri Quran'",       sample: "بِسْمِ اللَّهِ" },
-{ id: "reem",      name: "Reem Kufi",        css: "'Reem Kufi'",         sample: "بِسْمِ اللَّهِ" },
-{ id: "scheher",   name: "Scheherazade",     css: "'Scheherazade New'",  sample: "بِسْمِ اللَّهِ" },
-{ id: "cairo",     name: "Cairo Bold",       css: "'Cairo'",             sample: "بِسْمِ اللَّهِ" },
-{ id: "noto",      name: "Noto Naskh",       css: "'Noto Naskh Arabic'", sample: "بِسْمِ اللَّهِ" },
-{ id: "lateef",    name: "Lateef",           css: "'Lateef'",            sample: "بِسْمِ اللَّهِ" },
-{ id: "harmattan", name: "Harmattan",        css: "'Harmattan'",         sample: "بِسْمِ اللَّهِ" },
-{ id: "markazi",   name: "Markazi Text",     css: "'Markazi Text'",      sample: "بِسْمِ اللَّهِ" },
-{ id: "ruqaa",     name: "Aref Ruqaa",       css: "'Aref Ruqaa'",        sample: "بِسْمِ اللَّهِ" },
+  { id: "reem",      name: "Reem Kufi",        css: "'Reem Kufi'",         sample: "بِسْمِ اللَّهِ" },
+  { id: "scheher",   name: "Scheherazade",     css: "'Scheherazade New'",  sample: "بِسْمِ اللَّهِ" },
+  { id: "cairo",     name: "Cairo Bold",       css: "'Cairo'",             sample: "بِسْمِ اللَّهِ" },
+  { id: "noto",      name: "Noto Naskh",       css: "'Noto Naskh Arabic'", sample: "بِسْمِ اللَّهِ" },
+  { id: "lateef",    name: "Lateef",           css: "'Lateef'",            sample: "بِسْمِ اللَّهِ" },
+  { id: "harmattan", name: "Harmattan",        css: "'Harmattan'",         sample: "بِسْمِ اللَّهِ" },
+  { id: "markazi",   name: "Markazi Text",     css: "'Markazi Text'",      sample: "بِسْمِ اللَّهِ" },
+  { id: "ruqaa",     name: "Aref Ruqaa",       css: "'Aref Ruqaa'",        sample: "بِسْمِ اللَّهِ" },
 ];
 
 const THEMES = {
@@ -49,7 +50,7 @@ const S = {
   bgImg: null, bgVid: null,
   bgMotionT: 0,
   audioCtx: null, analyser: null, exportDest: null,
-  recAudioEl: null, recAudioSource: null,
+  recAudioEl: null,
   bgAudioEl: null, bgAudioSource: null,
   waveData: new Uint8Array(64).fill(0),
   stars: [], bokeh: [],
@@ -57,7 +58,6 @@ const S = {
   templates: [], reciters: [...RECITERS_LIST],
   allFonts: [...BUILT_IN_FONTS],
   rafId: null,
-  // logo
   logoImg: null,
 };
 
@@ -624,7 +624,7 @@ function drawWatermark(ctx, W, H) {
 }
 
 // ══════════════════════════════════════════════════════
-//  AUDIO (معدل للتصدير ومعالجة مشكلة التشغيل)
+//  AUDIO (معالجة CORS)
 // ══════════════════════════════════════════════════════
 function ensureAudioCtx() {
   if (!S.audioCtx || S.audioCtx.state === "closed") {
@@ -640,35 +640,28 @@ function ensureAudioCtx() {
 
 async function resumeAudioCtx() {
   const ctx = ensureAudioCtx();
-  if (ctx.state === "suspended") {
-    try {
-      await ctx.resume();
-    } catch (e) {
-      console.warn("AudioContext resume failed:", e);
-    }
-  }
+  if (ctx.state === "suspended") await ctx.resume();
   return ctx;
 }
 
 function playRecitationAudio() {
-  stopRecitationAudio();
+  // إيقاف الصوت السابق
+  if (S.recAudioEl) {
+    S.recAudioEl.pause();
+    S.recAudioEl.src = "";
+    S.recAudioEl = null;
+  }
   if (!S.verses.length) return;
   const aya = S.verses[S.currentAya];
   if (!aya) return;
   const surahNum = parseInt($("surah-sel").value) || 1;
   const reciter = S.reciters.find(r => r.id === radioVal("reciter")) || S.reciters[0];
   const url = `${AUDIO_BASE}/${reciter.folder}/${String(surahNum).padStart(3, "0")}${String(aya.numberInSurah).padStart(3, "0")}.mp3`;
-
-  // للتشخيص
   console.log("Loading audio:", url);
-
   const a = new Audio(url);
+  a.crossOrigin = "anonymous"; // قد يساعد لكن everyayah لا يدعمه
   a.volume = gv("rec-vol") / 100;
-
-  a.onloadedmetadata = () => {
-    S.ayaDurations[S.currentAya] = a.duration || 6;
-  };
-
+  a.onloadedmetadata = () => { S.ayaDurations[S.currentAya] = a.duration || 6; };
   a.onended = () => {
     if (!S.playing) return;
     if (S.currentAya < S.verses.length - 1) {
@@ -677,42 +670,26 @@ function playRecitationAudio() {
       pausePlayer(); S.currentAya = 0; S.elapsed = 0; updateAyaUI();
     }
   };
-
   a.onerror = (e) => {
     console.error("Audio error:", e);
     const dur = parseFloat(gv("aya-dur")) || 6;
     S.ayaDurations[S.currentAya] = dur;
-    toast("⚠️ تعذر تحميل الصوت (قد يكون الرابط خطأ أو لا اتصال)", "info");
+    toast("⚠️ تعذر تحميل الصوت (الرابط لا يعمل أو CORS)", "info");
   };
-
-  // ربط الصوت بـ AudioContext بعد التأكد من أن السياق نشط
-  resumeAudioCtx().then(ctx => {
-    try {
-      const source = ctx.createMediaElementSource(a);
-      source.connect(ctx.destination);          // للتشغيل العادي
-      source.connect(S.analyser);                // للموجة
-      source.connect(S.exportDest);              // للتصدير
-      S.recAudioSource = source;
-    } catch (e) {
-      console.warn("Could not connect audio to context:", e);
-    }
-  }).catch(e => console.warn("AudioContext resume failed:", e));
-
   a.play().catch(e => {
     toast("⚠️ اضغط على زر التشغيل أولاً", "info");
     console.warn("Play failed:", e);
   });
-
   S.recAudioEl = a;
   $("audio-status").textContent = `▶️ ${reciter.name} — الآية ${aya.numberInSurah}`;
 }
 
 function stopRecitationAudio() {
-  if (S.recAudioSource) {
-    try { S.recAudioSource.disconnect(); } catch (e) { }
-    S.recAudioSource = null;
+  if (S.recAudioEl) {
+    S.recAudioEl.pause();
+    S.recAudioEl.src = "";
+    S.recAudioEl = null;
   }
-  if (S.recAudioEl) { S.recAudioEl.pause(); S.recAudioEl.src = ""; S.recAudioEl = null; }
 }
 
 function onBgAudio(input) {
@@ -724,7 +701,7 @@ function onBgAudio(input) {
   a.loop = ge("bg-loop");
   a.volume = gv("bg-vol") / 100;
   S.bgAudioEl = a;
-
+  // ربط الصوت المحلي بـ AudioContext للتصدير (لا توجد مشكلة CORS لأنه من نفس المصدر)
   resumeAudioCtx().then(ctx => {
     try {
       const src = ctx.createMediaElementSource(a);
@@ -732,9 +709,10 @@ function onBgAudio(input) {
       src.connect(S.analyser);
       src.connect(S.exportDest);
       S.bgAudioSource = src;
-    } catch (e) { console.warn("Audio ctx:", e); }
-  }).catch(e => console.warn("AudioContext error:", e));
-
+    } catch (e) {
+      console.warn("Could not connect background audio to context", e);
+    }
+  }).catch(console.warn);
   $("bg-audio-info").textContent = `✅ ${file.name} (${(file.size / 1e6).toFixed(1)}MB)`;
   toast("🎵 تم تحميل صوت الخلفية", "success");
 }
@@ -793,10 +771,10 @@ function startPlayer() {
   if (!S.verses.length) { toast("⚠️ لا توجد آيات مُحمَّلة", "error"); return; }
   S.playing = true;
   $("btn-play").textContent = "⏸️";
-  resumeAudioCtx().then(() => {
-    if (S.bgAudioEl) { S.bgAudioEl.loop = ge("bg-loop"); S.bgAudioEl.play().catch(() => { }); }
-    playRecitationAudio();
-  }).catch(e => console.warn("AudioContext start failed:", e));
+  // تنشيط AudioContext إذا كان متوقفاً (لصوت الخلفية)
+  resumeAudioCtx().catch(console.warn);
+  if (S.bgAudioEl) { S.bgAudioEl.loop = ge("bg-loop"); S.bgAudioEl.play().catch(() => { }); }
+  playRecitationAudio();
 }
 
 function pausePlayer() {
@@ -836,7 +814,7 @@ function updateAyaUI() {
 function fmt(s) { const m = Math.floor(s / 60); return `${m}:${String(Math.floor(s % 60)).padStart(2, "0")}`; }
 
 // ══════════════════════════════════════════════════════
-//  EXPORT (معدل بالكامل)
+//  EXPORT (يتم تضمين صوت الخلفية فقط)
 // ══════════════════════════════════════════════════════
 async function startExport(type) {
   if (!S.verses.length) { toast("⚠️ لا توجد آيات", "error"); return; }
@@ -847,7 +825,7 @@ async function startExport(type) {
 
   const cv = $("cv");
   const canvasStream = cv.captureStream(30);
-  await resumeAudioCtx(); // تأكد من أن السياق نشط قبل البدء
+  await resumeAudioCtx(); // تأكد من أن السياق نشط
   const allTracks = [...canvasStream.getTracks()];
   if (S.exportDest) {
     allTracks.push(...S.exportDest.stream.getAudioTracks());
@@ -873,11 +851,15 @@ async function startExport(type) {
   const savedAya = S.currentAya, savedElapsed = S.elapsed, savedPlaying = S.playing;
   S.playing = true; S.currentAya = 0; S.elapsed = 0;
 
+  // تشغيل صوت الخلفية من البداية (إن وجد)
   if (S.bgAudioEl) {
     S.bgAudioEl.currentTime = 0;
     S.bgAudioEl.play().catch(() => { });
   }
-  playRecitationAudio(); // يبدأ من الآية 0
+
+  // لا نقوم بتشغيل صوت المقرئ عبر الـ AudioContext لتجنب CORS
+  // سنقوم بتشغيله بشكل عادي (لن يلتقطه التصدير)
+  playRecitationAudio();
 
   const fps = 30;
   const ayaDur = parseFloat(gv("aya-dur")) || 6;
@@ -1015,7 +997,7 @@ async function loadTranslations() {
 }
 
 // ══════════════════════════════════════════════════════
-//  FONTS (معدل لتحميل الخطوط المحلية)
+//  FONTS (مع إصلاح المسافات باستخدام encodeURI)
 // ══════════════════════════════════════════════════════
 function renderFontGrid() {
   const grid = $("font-grid"); grid.innerHTML = "";
@@ -1038,7 +1020,9 @@ async function loadLocalFonts(showToast = false) {
       if (!item.name || !item.file) continue;
       if (S.allFonts.find(x => x.name === item.name)) continue;
       try {
-        const face = new FontFace(item.name, `url(./fonts/${item.file})`);
+        // استخدام encodeURI لمعالجة المسافات في أسماء الملفات
+        const fontUrl = `./fonts/${encodeURI(item.file)}`;
+        const face = new FontFace(item.name, `url(${fontUrl})`);
         await face.load();
         document.fonts.add(face);
         S.allFonts.push({
@@ -1080,7 +1064,7 @@ function loadCustomFonts(input) {
 }
 
 // ══════════════════════════════════════════════════════
-//  RECITERS (مع إضافة تعديل لجميع القراء)
+//  RECITERS (جميع القراء قابلة للتعديل والحذف)
 // ══════════════════════════════════════════════════════
 function renderReciters() {
   const grid = $("reciters-grid");
@@ -1088,37 +1072,31 @@ function renderReciters() {
   S.reciters.forEach((r, i) => {
     const div = document.createElement("div");
     div.className = "rctr-card";
-    // إضافة أزرار تعديل وحذف لجميع القراء (الافتراضيين والمخصصين)
     div.innerHTML = `
-    <input type="radio" name="reciter" id="rc${i}" value="${r.id}" ${i === 0 ? "checked" : ""}>
-    <label for="rc${i}">
-    <span class="rf">${r.flag}</span>${r.name}
-    <span class="edit-reciter" data-id="${r.id}" data-name="${r.name}" data-flag="${r.flag}" data-folder="${r.folder}">✏️</span>
-    <span class="del-reciter" data-id="${r.id}">🗑️</span>
-    </label>
+      <input type="radio" name="reciter" id="rc${i}" value="${r.id}" ${i === 0 ? "checked" : ""}>
+      <label for="rc${i}">
+        <span class="rf">${r.flag}</span>${r.name}
+        <span class="edit-reciter" data-id="${r.id}" data-name="${r.name}" data-flag="${r.flag}" data-folder="${r.folder}">✏️</span>
+        <span class="del-reciter" data-id="${r.id}">🗑️</span>
+      </label>
     `;
     grid.appendChild(div);
   });
-
   document.querySelectorAll(".del-reciter").forEach(btn => {
     btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
       deleteReciter(btn.dataset.id);
     });
   });
-
   document.querySelectorAll(".edit-reciter").forEach(btn => {
     btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
       openEditReciterForm(btn.dataset);
     });
   });
 }
 
 function deleteReciter(id) {
-  // لا تسمح بحذف جميع القراء، على الأقل اترك واحداً
   if (S.reciters.length <= 1) {
     toast("⚠️ لا يمكن حذف آخر قارئ", "error");
     return;
@@ -1131,9 +1109,7 @@ function deleteReciter(id) {
 function openEditReciterForm(data) {
   $("ar-name").value = data.name;
   const flagSelect = $("ar-flag");
-  for (let opt of flagSelect.options) {
-    if (opt.value === data.flag) { opt.selected = true; break; }
-  }
+  for (let opt of flagSelect.options) if (opt.value === data.flag) { opt.selected = true; break; }
   $("ar-folder").value = data.folder;
   $("add-reciter-form").classList.add("on");
   $("add-reciter-form").dataset.editId = data.id;
@@ -1146,23 +1122,18 @@ function addCustomReciter() {
   if (!name || !folder) { toast("⚠️ أدخل الاسم والمجلد", "error"); return; }
   const editId = $("add-reciter-form").dataset.editId;
   if (editId) {
-    // تحديث قارئ موجود
     const index = S.reciters.findIndex(r => r.id === editId);
-    if (index !== -1) {
-      S.reciters[index] = { ...S.reciters[index], name, flag, folder };
-    }
+    if (index !== -1) S.reciters[index] = { ...S.reciters[index], name, flag, folder };
     delete $("add-reciter-form").dataset.editId;
     toast(`✅ تم تحديث: ${name}`, "success");
   } else {
-    // إضافة قارئ جديد
     const id = "custom_" + Date.now();
     S.reciters.push({ id, name, flag, folder });
     toast(`✅ تمت إضافة: ${name}`, "success");
   }
   renderReciters();
   $("add-reciter-form").classList.remove("on");
-  $("ar-name").value = "";
-  $("ar-folder").value = "";
+  $("ar-name").value = ""; $("ar-folder").value = "";
 }
 
 function toggleAddReciter() {
@@ -1170,8 +1141,7 @@ function toggleAddReciter() {
   f.classList.toggle("on");
   if (f.classList.contains("on")) {
     delete f.dataset.editId;
-    $("ar-name").value = "";
-    $("ar-folder").value = "";
+    $("ar-name").value = ""; $("ar-folder").value = "";
   }
 }
 
