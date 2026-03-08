@@ -11,13 +11,13 @@
   "dir": "rtl",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "gt-sqr-icons/192x192/gt-sqr-icon.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "icon-512.png",
+      "src": "gt-sqr-icons/512x512/gt-sqr-icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
