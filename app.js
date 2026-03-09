@@ -1104,9 +1104,14 @@ async function startExport(type) {
   // صوت الخلفية (من البداية)
   if (S.bgAudioEl) { S.bgAudioEl.currentTime = 0; S.bgAudioEl.play().catch(() => {}); }
 
-  // ── 6. حلقة الرسم بـ setTimeout (تعمل في خلفية التبويب) ─
-  // setTimeout بديل requestAnimationFrame لأن rAF يتجمد عند تغيير التبويب
-  // totalDuration = مجموع مدد الآيات فقط (لا صوت الخلفية)
+  // ── 6. حلقة الرسم — AudioContext كساعة رئيسية ────────
+  //
+  // المبدأ الذهبي:
+  //   ctx.currentTime يتقدم دائماً (حتى في خلفية التبويب)
+  //   نحسب وقت المشروع = ctx.currentTime - audioStartTime
+  //   ونرسم الإطار المناسب لكل لحظة حقيقية
+  //   MediaRecorder يسجل الوقت الحقيقي تلقائياً → المدة صحيحة دائماً
+  //
   const savedAya     = S.currentAya;
   const savedElapsed = S.elapsed;
   const savedPlaying = S.playing;
@@ -1120,53 +1125,68 @@ async function startExport(type) {
     return idx;
   };
 
-  // نقطة الصفر الحقيقية
-  const exportT0     = performance.now();
-  let   renderedFrames = 0;
-  let   exportTimer    = null;
+  let exportTimer     = null;
+  let lastDrawnFrame  = -1;   // آخر إطار رُسم — نتجنب إعادة رسم نفس الإطار
+  let exportDone      = false;
 
   const doExportFrame = () => {
-    if (S.exportCancel) {
-      mr.stop();
-      restoreExportState();
-      return;
-    }
+    if (S.exportCancel || exportDone) return;
 
-    if (renderedFrames >= totalFrames) {
-      // اكتمل الرسم — أوقف الخلفية فوراً ثم أعطِ 150ms لـ MediaRecorder يفرغ بياناته
+    // ── الوقت الحقيقي للمشروع من ساعة AudioContext ──
+    const projectTime = ctx.currentTime - audioStartTime;
+
+    if (projectTime >= totalDuration) {
+      // اكتملت الآيات — أوقف الخلفية فوراً
+      exportDone = true;
       if (S.bgAudioEl) { S.bgAudioEl.pause(); S.bgAudioEl.currentTime = 0; }
-      setTimeout(() => { mr.stop(); restoreExportState(); }, 150);
+      // أعطِ 200ms لـ MediaRecorder يفرغ البيانات الأخيرة ثم أوقف
+      setTimeout(() => { mr.stop(); restoreExportState(); }, 200);
       return;
     }
 
-    // ── ارسم الإطار الحالي ──
-    const t  = renderedFrames / FPS;
-    const ci = getAyaAt(t);
-    S.currentAya = ci;
-    S.elapsed    = t - ayaStarts[ci];
-    drawFrame(t);
-    renderedFrames++;
+    // ── ارسم الإطار المناسب للوقت الحالي ──
+    const targetFrame = Math.floor(projectTime * FPS);
 
-    // ── تحديث واجهة التقدم ──
-    const pct = Math.min(100, Math.round((renderedFrames / totalFrames) * 100));
-    $("rec-fill").style.width = pct + "%";
-    $("rec-pct").textContent  = pct + "%";
-    $("rec-sub").textContent  =
-    `🎬 ${renderedFrames}/${totalFrames} — الآية ${S.currentAya + 1}/${S.verses.length} — ${fmt(t)} / ${fmt(totalDuration)}`;
+    if (targetFrame > lastDrawnFrame) {
+      const t  = targetFrame / FPS;
+      const ci = getAyaAt(Math.min(t, totalDuration - 0.001));
+      S.currentAya = ci;
+      S.elapsed    = Math.max(0, t - ayaStarts[ci]);
+      drawFrame(t);
+      lastDrawnFrame = targetFrame;
 
-    // ── جدول الإطار التالي في توقيته الصحيح ──
-    // نحسب متى يجب أن يبدأ الإطار القادم بالنسبة لـ exportT0
-    // ثم ننتظر الفارق فقط — لا أقل ولا أكثر
-    const nextFrameTarget = exportT0 + renderedFrames * FRAME_MS;
-    const waitMs = Math.max(0, nextFrameTarget - performance.now());
-    exportTimer = setTimeout(doExportFrame, waitMs);
+      // ── تحديث واجهة التقدم ──
+      const pct = Math.min(99, Math.round((projectTime / totalDuration) * 100));
+      $("rec-fill").style.width = pct + "%";
+      $("rec-pct").textContent  = pct + "%";
+      $("rec-sub").textContent  =
+      `🎬 ${targetFrame}/${totalFrames} — الآية ${ci + 1}/${S.verses.length} — ${fmt(projectTime)} / ${fmt(totalDuration)}`;
+      updateAyaUI();
+    }
+
+    // ── جدول الدورة القادمة ──
+    // نستخدم setTimeout(fn,1000/FPS) كـ fallback للخلفية
+    // ونضيف rAF عند العودة للتبويب لاستئناف التحديث البصري
+    const msToNextFrame = Math.max(4, FRAME_MS - ((projectTime * 1000) % FRAME_MS));
+    exportTimer = setTimeout(doExportFrame, msToNextFrame);
   };
 
-  // ابدأ الإطار الأول فوراً
+  // استئناف فوري عند العودة للتبويب (visibility change)
+  const onVisChange = () => {
+    if (!document.hidden && !exportDone && !S.exportCancel) {
+      if (exportTimer) { clearTimeout(exportTimer); exportTimer = null; }
+      doExportFrame();
+    }
+  };
+  document.addEventListener("visibilitychange", onVisChange);
+
+  // ابدأ
   exportTimer = setTimeout(doExportFrame, 0);
 
   function restoreExportState() {
+    exportDone = true;
     if (exportTimer !== null) { clearTimeout(exportTimer); exportTimer = null; }
+    document.removeEventListener("visibilitychange", onVisChange);
     S.exporting    = false;
     S.playing      = savedPlaying;
     S.currentAya   = savedAya;
