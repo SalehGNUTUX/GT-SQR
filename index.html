@@ -96,8 +96,11 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--fu);direction:rtl;d
 .sg input[type=range]{flex:1;-webkit-appearance:none;height:3px;background:var(--b1);border-radius:6px;outline:none;cursor:pointer}
 .sg input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;background:var(--a);border-radius:50%;cursor:pointer;box-shadow:0 0 5px rgba(201,162,39,.4)}
 .sv{min-width:30px;text-align:center;font-size:9.5px;color:var(--al);font-weight:700}
-.cpg{display:flex;align-items:center;gap:5px}
-.cpg input[type=color]{width:27px;height:27px;border:1.5px solid var(--b1);border-radius:5px;cursor:pointer;background:none;padding:1px;flex-shrink:0}
+.cpg{display:flex;align-items:center;gap:5px;direction:ltr}
+.cpg input[type=color]{width:27px;height:27px;border:1.5px solid var(--b1);border-radius:5px;cursor:pointer;background:none;padding:1px;flex-shrink:0;order:-1}
+/* في اللوحة اليمينية، نعكس ترتيب منتقي اللون ليفتح نحو اليسار */
+#panel .cpg{flex-direction:row-reverse;direction:rtl}
+#panel .cpg input[type=color]{order:0}
 
 /* RADIO CARDS */
 .rg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
@@ -107,6 +110,10 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--fu);direction:rtl;d
 .rc label{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:5px 2px;background:var(--bg3);border:1px solid var(--b1);border-radius:var(--r);cursor:pointer;transition:var(--tr);font-size:9px;color:var(--t2);text-align:center;line-height:1.3}
 .rc label .ri{font-size:13px}
 .rc input:checked+label{background:rgba(10,92,54,.28);border-color:var(--pl);color:var(--al)}
+.rcg{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:5px}
+.rcg input[type=radio]{display:none}
+.rcg label{display:block;padding:7px 4px;border:1px solid var(--b1);border-radius:var(--r);font-size:10px;text-align:center;cursor:pointer;transition:var(--tr);color:var(--t2)}
+.rcg input[type=radio]:checked+label{background:rgba(10,92,54,.28);border-color:var(--pl);color:var(--al);font-weight:700}
 .rc label:hover{border-color:var(--b2);color:var(--t1)}
 
 /* TOGGLES */
@@ -224,14 +231,21 @@ body.offline .offline-badge{display:block}
 #logo-img-preview{max-width:100%;max-height:50px;border-radius:4px}
 
 /* ══ MOBILE LAYOUT ══════════════════════════════════ */
-#mob-toggle{display:none;width:36px;height:36px;border:1px solid var(--b1);border-radius:var(--r);background:var(--bg3);color:var(--t1);font-size:18px;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;transition:var(--tr)}
+#mob-toggle{display:none;min-width:36px;height:36px;padding:0 10px;border:1px solid var(--b1);border-radius:var(--r);background:var(--bg3);color:var(--t1);font-size:13px;font-weight:700;font-family:var(--fu);cursor:pointer;align-items:center;justify-content:center;gap:4px;flex-shrink:0;transition:var(--tr);white-space:nowrap}
 #mob-toggle:hover{border-color:var(--pl);color:var(--al)}
-/* بار العرض (أفقي/عمودي) — يظهر فقط على الموبايل */
-#mob-layout-bar{display:none;background:var(--bg1);border-bottom:1px solid var(--b1);padding:4px 12px;gap:6px;align-items:center;flex-shrink:0;z-index:150}
-.mob-lay-btn{flex:1;padding:4px 0;border:1px solid var(--b1);border-radius:var(--r);background:var(--bg3);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;font-family:var(--fu);transition:var(--tr);text-align:center}
-.mob-lay-btn.on{background:rgba(10,92,54,.3);border-color:var(--pl);color:var(--al)}
-/* الـbackdrop */
-#mob-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:190;backdrop-filter:blur(3px)}
+#mob-toggle.active{background:rgba(10,92,54,.3);border-color:var(--pl);color:var(--al)}
+
+/* شريط التخطيط — يظهر فقط على الموبايل */
+#mob-layout-bar{display:none;background:var(--bg1);border-bottom:1px solid var(--b1);padding:3px 10px;gap:5px;align-items:center;flex-shrink:0;z-index:150;height:34px}
+.mob-lay-btn{flex:1;height:26px;border:1px solid var(--b1);border-radius:var(--r);background:var(--bg3);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;font-family:var(--fu);transition:var(--tr);text-align:center;white-space:nowrap}
+.mob-lay-btn.on{background:rgba(10,92,54,.35);border-color:var(--pl);color:var(--al)}
+
+/* شريط حجم اللوحة (يظهر فقط عند فتح اللوحة على موبايل) */
+#mob-size-bar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:201;background:var(--bg1);border-top:1px solid var(--b2);padding:3px 12px;align-items:center;gap:8px}
+#mob-size-bar input[type=range]{flex:1;accent-color:var(--p)}
+#mob-size-bar span{font-size:9px;color:var(--t3);white-space:nowrap;min-width:30px;text-align:center}
+
+#mob-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:190;backdrop-filter:blur(2px)}
 #mob-backdrop.on{display:block}
 
 @media(max-width:760px){
@@ -241,87 +255,62 @@ body.offline .offline-badge{display:block}
   .logo-text small{display:none}
   .ex-info{display:none}
 
-  /* ── الوضع الافتراضي: عمودي (Panel كـ Bottom Sheet) ── */
-  #app{
-    grid-template-columns:1fr;
-    grid-template-rows:1fr;
-    position:relative;
-  }
+  /* ── Preview يأخذ الشاشة كاملة دائماً ── */
+  #app{grid-template-columns:1fr;position:relative;overflow:hidden}
   #preview{
-    position:absolute;
-    inset:0;
-    padding:6px;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
+    position:absolute;inset:0;padding:6px;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
   }
-  /* Panel = Bottom Sheet */
+
+  /* ── Panel = Bottom Sheet (الوضع الافتراضي) ── */
   #panel{
-    position:fixed;
-    left:0; right:0; bottom:0;
-    height:62vh;
+    position:fixed;left:0;right:0;bottom:0;
+    height:var(--panel-h, 62vh);
     z-index:200;
-    border-top:2px solid var(--pl);
-    border-left:none;
+    border-top:2px solid var(--pl);border-left:none;
     border-radius:16px 16px 0 0;
     transform:translateY(100%);
-    transition:transform .3s cubic-bezier(.32,.72,0,1);
-    box-shadow:0 -6px 30px rgba(0,0,0,.7);
+    transition:transform .3s cubic-bezier(.32,.72,0,1),height .2s;
+    box-shadow:0 -8px 32px rgba(0,0,0,.7);
     overflow:hidden;
   }
   #panel.mob-open{transform:translateY(0)}
-  /* مقبض الـsheet */
-  #panel::before{
-    content:'';
-    display:block;
-    width:40px;height:4px;
-    background:var(--b2);
-    border-radius:2px;
-    margin:8px auto 0;
-    flex-shrink:0;
-  }
-  /* وضع أفقي: Panel من اليمين، Preview يبقى ظاهراً */
-  body.mob-horiz #app{
-    display:grid;
-    grid-template-columns:1fr;
-    height:100%;
-  }
-  body.mob-horiz #preview{
-    position:relative;
-    inset:auto;
-    flex:1;
-    min-height:0;
-  }
+
+  /* شريط حجم اللوحة نشط */
+  #panel.mob-open ~ #mob-size-bar{display:flex}
+
+  /* ── وضع أفقي: Panel من اليمين ── */
   body.mob-horiz #panel{
-    position:fixed;
-    top:0; bottom:0; right:0; left:auto;
-    width:min(88vw,340px);
-    height:auto;
-    border-top:none;
-    border-left:2px solid var(--pl);
+    position:fixed;top:0;bottom:0;right:0;left:auto;
+    width:var(--panel-w, 52vw);height:auto;
+    border-top:none;border-left:2px solid var(--pl);
     border-radius:0;
     transform:translateX(100%);
-    transition:transform .3s cubic-bezier(.32,.72,0,1);
+    transition:transform .3s cubic-bezier(.32,.72,0,1),width .2s;
   }
   body.mob-horiz #panel.mob-open{transform:translateX(0)}
-  body.mob-horiz #panel::before{display:none}
-  /* وضع كامل: Panel يأخذ الشاشة */
-  body.mob-full #panel{
-    height:85vh;
-  }
-  /* canvas مرن */
-  .cw{max-width:calc(100vw - 12px);max-height:calc(100vh - 150px)}
+  body.mob-horiz #panel ~ #mob-size-bar{display:flex}
+  body.mob-horiz #panel ~ #mob-size-bar input{accent-color:var(--p)}
+
+  /* مقبض السحب */
+  #panel-handle{display:flex}
+  body.mob-horiz #panel-handle{display:none}
+
+  .cw{max-width:calc(100vw - 12px);max-height:calc(100vh - 130px)}
   #cv{max-width:100%;max-height:100%}
+  #exbar{padding:0 8px}
 }
+
 @media(max-width:480px){
-  #hdr{padding:0 10px;height:56px}
+  #hdr{padding:0 9px;height:54px}
   #exbar{padding:0 6px;gap:3px}
   .hdr-r .btn span{display:none}
-  .logo-icon{width:44px;height:44px}
+  .logo-icon{width:42px;height:42px}
   .logo-text h1{font-size:13px}
   .btn-a,.btn-p{padding:5px 8px;font-size:9px}
   .btn-a span,.btn-p span{display:none}
+  .tabs .tab-btn span:not(.ti){display:none}
 }
 /* Touch swipe handle */
 #panel-handle{display:none;height:22px;flex-shrink:0;cursor:grab;align-items:center;justify-content:center}
@@ -333,6 +322,11 @@ body.offline .offline-badge{display:block}
 
 <div class="offline-badge">📵 غير متصل</div>
 <div id="mob-backdrop" onclick="closeMobilePanel()"></div>
+<div id="mob-size-bar">
+  <span style="font-size:10px">📐</span>
+  <input type="range" id="panel-size-slider" min="30" max="90" value="62" oninput="onPanelSizeChange(this.value)">
+  <span id="panel-size-lbl">62٪</span>
+</div>
 <div id="toast-c"></div>
 
 <div id="rec-ov">
@@ -368,7 +362,7 @@ body.offline .offline-badge{display:block}
   <div class="hdr-r">
     <button class="btn btn-g bsm" onclick="openModal('tpl-modal')">💾 <span>حفظ</span></button>
     <button class="btn btn-g bsm" onclick="goTab('tpl')">📂 <span>القوالب</span></button>
-    <button id="mob-toggle" onclick="toggleMobilePanel()" title="الأدوات">☰</button>
+    <button id="mob-toggle" onclick="toggleMobilePanel()" title="الأدوات">🛠 الأدوات</button>
   </div>
 </header>
 
@@ -391,6 +385,7 @@ body.offline .offline-badge{display:block}
       <button class="tab-btn" data-tab="mix"><span class="ti">🎵</span><span>المكساج</span></button>
       <button class="tab-btn" data-tab="fx"><span class="ti">⚡</span><span>التأثيرات</span></button>
       <button class="tab-btn" data-tab="tpl"><span class="ti">📂</span><span>القوالب</span></button>
+      <button class="tab-btn" data-tab="settings"><span class="ti">⚙️</span><span>إعدادات</span></button>
       <button class="tab-btn" data-tab="about"><span class="ti">ℹ️</span><span>عن</span></button>
     </div>
 
@@ -711,6 +706,59 @@ body.offline .offline-badge{display:block}
       </div>
 
       <!-- ABOUT -->
+      <!-- SETTINGS -->
+      <div class="tp" id="tab-settings">
+        <div class="sec">
+          <div class="sec-t">🎬 جودة التصدير</div>
+          <div class="fg"><label class="fl">دقة الفيديو</label>
+            <select class="fc" id="export-res">
+              <option value="720">720p (HD)</option>
+              <option value="1080" selected>1080p (Full HD)</option>
+              <option value="1920">1920×1080 (مخصص)</option>
+            </select>
+          </div>
+          <div class="fg"><label class="fl">معدل الإطارات (FPS)</label>
+            <select class="fc" id="export-fps">
+              <option value="24">24 fps (سينما)</option>
+              <option value="30" selected>30 fps (قياسي)</option>
+              <option value="60">60 fps (سلس)</option>
+            </select>
+          </div>
+          <div class="fg"><label class="fl">جودة الصورة (Mbps)</label>
+            <div class="sg"><input type="range" min="2" max="20" value="8" id="export-vbr" oninput="sv(this,'export-vbr-v',' Mbps')"><span class="sv" id="export-vbr-v">8 Mbps</span></div>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="sec-t">📐 نسبة العرض</div>
+          <div class="rcg" id="ratio-grp">
+            <input type="radio" name="ratio" id="r-916" value="9:16" checked><label for="r-916">📱 9:16 ريلز</label>
+            <input type="radio" name="ratio" id="r-11" value="1:1"><label for="r-11">🟦 1:1 مربع</label>
+            <input type="radio" name="ratio" id="r-169" value="16:9"><label for="r-169">🖥️ 16:9 يوتيوب</label>
+            <input type="radio" name="ratio" id="r-45" value="4:5"><label for="r-45">📸 4:5 انستجرام</label>
+          </div>
+        </div>
+        <div class="sec">
+          <div class="sec-t">🔊 الصوت عند المعاينة</div>
+          <div class="tgg"><span class="tgl">تشغيل الصوت تلقائياً</span><label class="tg"><input type="checkbox" id="auto-play-audio" checked><span class="tgs"></span></label></div>
+          <div class="tgg"><span class="tgl">إظهار مؤشر الصوت</span><label class="tg"><input type="checkbox" id="show-audio-status" checked onchange="$('audio-status').style.display=this.checked?'':'none'"><span class="tgs"></span></label></div>
+        </div>
+        <div class="sec">
+          <div class="sec-t">📱 عرض الأدوات (موبايل)</div>
+          <div class="fg"><label class="fl">الحجم الافتراضي للأدوات</label>
+            <select class="fc" id="panel-default-size">
+              <option value="50">50٪ من الشاشة</option>
+              <option value="62" selected>62٪ من الشاشة</option>
+              <option value="75">75٪ من الشاشة</option>
+            </select>
+          </div>
+          <div class="tgg"><span class="tgl">فتح الأدوات تلقائياً عند التشغيل</span><label class="tg"><input type="checkbox" id="auto-open-panel"><span class="tgs"></span></label></div>
+        </div>
+        <div class="sec">
+          <div class="sec-t">🗑️ إعادة الضبط</div>
+          <button class="btn btn-d bfw" onclick="resetAllSettings()">⚠️ إعادة جميع الإعدادات للافتراضي</button>
+        </div>
+      </div>
+
       <div class="tp" id="tab-about">
         <div class="about-logo"><div class="al-icon">📿</div><h2>GT-SQR</h2><p>GnuTux Short Quran Reels v2.0</p></div>
         <div class="sec">
