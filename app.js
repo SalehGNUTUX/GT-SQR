@@ -607,31 +607,43 @@ function wrapText(ctx, text, maxW, fsz, font) {
 // ══════════════════════════════════════════════════════
 function getWaveData(ts) {
   if (S.analyser) {
-    const d = new Uint8Array(S.analyser.frequencyBinCount);
-    S.analyser.getByteFrequencyData(d);
-    if (d.some(v => v > 15)) { S.waveData = d; return; }
+    const full = new Uint8Array(S.analyser.frequencyBinCount); // 256 bins
+    S.analyser.getByteFrequencyData(full);
+    if (full.some(v => v > 15)) {
+      // استخراج نطاق الصوت البشري فقط: 80Hz–3000Hz
+      // كل bin ≈ sampleRate/fftSize ≈ 86Hz
+      // bin 1 ≈ 86Hz  |  bin 35 ≈ 3010Hz
+      const voiceStart = 1;
+      const voiceEnd   = Math.min(35, full.length - 1);
+      const voiceBins  = full.slice(voiceStart, voiceEnd + 1); // ~35 قيمة
+      // تمديدها لـ 64 نقطة (حجم waveData المعروض)
+      const out = new Uint8Array(64);
+      for (let i = 0; i < 64; i++) {
+        const srcIdx = Math.floor(i / 64 * voiceBins.length);
+        out[i] = voiceBins[srcIdx];
+      }
+      S.waveData = out;
+      return;
+    }
   }
-  const n = 128;
+  const n = 64;
   const data = new Uint8Array(n);
   const active = S.playing || (S.bgAudioEl && !S.bgAudioEl.paused);
   if (active) {
-    // محاكاة طيف صوتي واقعي للتلاوة
+    // محاكاة نطاق الصوت البشري (80Hz–3kHz): أساسيات + هارمونيكس القراءة
     for (let i = 0; i < n; i++) {
       const f = i / n;
-      // منحنى الطيف: أساسيات قوية، ميد متوسط، عالي خافت
-      const bass   = f < 0.12 ? Math.pow(1 - f / 0.12, 1.8) * 0.85 : 0;
-      const low    = Math.exp(-Math.pow(f - 0.22, 2) / 0.015) * 0.75;
-      const mid    = Math.exp(-Math.pow(f - 0.40, 2) / 0.025) * 0.65;
-      const highmid= Math.exp(-Math.pow(f - 0.60, 2) / 0.030) * 0.45;
-      const treble = Math.exp(-Math.pow(f - 0.78, 2) / 0.020) * 0.25;
-      const envelope = bass + low + mid + highmid + treble;
-      // إيقاع ونبض
-      const pulse = 0.7 + 0.3 * Math.sin(ts * 3.8 + i * 0.35);
-      const slow  = 0.6 + 0.4 * Math.sin(ts * 1.1 + i * 0.18 + 0.9);
-      const fast  = 0.5 + 0.5 * Math.abs(Math.sin(ts * 6.2 + i * 0.9));
-      const noise = Math.random() * 0.06;
-      const val = (pulse * 0.45 + slow * 0.35 + fast * 0.14 + noise + 0.06) * envelope;
-      data[i] = Math.min(255, Math.floor(val * 290));
+      // قمة واضحة في منتصف النطاق (الصوت البشري الأساسي ~300Hz–1kHz)
+      const fund    = Math.exp(-Math.pow(f - 0.25, 2) / 0.018) * 0.90;
+      const harm1   = Math.exp(-Math.pow(f - 0.48, 2) / 0.022) * 0.70;
+      const harm2   = Math.exp(-Math.pow(f - 0.70, 2) / 0.025) * 0.45;
+      const sublow  = f < 0.10 ? (1 - f / 0.10) * 0.55 : 0; // ديناميكية الصدر
+      const envelope = fund + harm1 + harm2 + sublow;
+      const pulse = 0.65 + 0.35 * Math.sin(ts * 4.2 + i * 0.4);
+      const slow  = 0.55 + 0.45 * Math.sin(ts * 1.3 + i * 0.2 + 1.1);
+      const noise = Math.random() * 0.05;
+      const val = (pulse * 0.50 + slow * 0.40 + noise + 0.10) * envelope;
+      data[i] = Math.min(255, Math.floor(val * 300));
     }
   }
   S.waveData = data;
@@ -655,7 +667,8 @@ function drawWave(ctx, W, H, ts) {
       const bh = (S.waveData[i] / 255) * wh;
       const alpha = 0.4 + 0.5 * (S.waveData[i] / 255);
       ctx.fillStyle = `rgba(${cr},${cg},${cb},${alpha})`;
-      const y0 = pos === "top" ? wh + 4 - bh : H - wh - 4;
+      // الأعمدة تنمو من الأسفل لأعلى (y0 = قمة العمود، الأسفل ثابت)
+      const y0 = pos === "top" ? 4 : H - 4 - bh;
       ctx.fillRect(i * bw, y0, bw * 0.78, bh);
     }
   } else if (shape === "wave") {
