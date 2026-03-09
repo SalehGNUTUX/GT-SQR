@@ -8,23 +8,23 @@
 // ── RECITERS REGISTRY ──────────────────────────────────
 const RECITERS_LIST = [
   { id: "alafasy",  name: "مشاري العفاسي",        flag: "🇰🇼", folder: "Alafasy_128kbps" },
-{ id: "ghamdi",   name: "سعد الغامدي",           flag: "🇸🇦", folder: "Ghamadi_40kbps" },
-{ id: "minshawi", name: "المنشاوي مرتل",         flag: "🇪🇬", folder: "Minshawy_Murattal_128kbps" },
-{ id: "husary",   name: "محمود الحصري",          flag: "🇪🇬", folder: "Husary_128kbps" },
-{ id: "shaatri",  name: "أبو بكر الشاطري",       flag: "🇸🇦", folder: "abu_bakr_ash-shaatree_128kbps" },
-{ id: "maher",    name: "ماهر المعيقلي",         flag: "🇸🇦", folder: "MaherAlMuaiqly128kbps" },
+  { id: "ghamdi",   name: "سعد الغامدي",           flag: "🇸🇦", folder: "Ghamadi_40kbps" },
+  { id: "minshawi", name: "المنشاوي مرتل",         flag: "🇪🇬", folder: "Minshawy_Murattal_128kbps" },
+  { id: "husary",   name: "محمود الحصري",          flag: "🇪🇬", folder: "Husary_128kbps" },
+  { id: "shaatri",  name: "أبو بكر الشاطري",       flag: "🇸🇦", folder: "abu_bakr_ash-shaatree_128kbps" },
+  { id: "maher",    name: "ماهر المعيقلي",         flag: "🇸🇦", folder: "MaherAlMuaiqly128kbps" },
 ];
 
 const BUILT_IN_FONTS = [
   { id: "amiri",     name: "Amiri Quran",     css: "'Amiri Quran'",       sample: "بِسْمِ اللَّهِ" },
-{ id: "reem",      name: "Reem Kufi",        css: "'Reem Kufi'",         sample: "بِسْمِ اللَّهِ" },
-{ id: "scheher",   name: "Scheherazade",     css: "'Scheherazade New'",  sample: "بِسْمِ اللَّهِ" },
-{ id: "cairo",     name: "Cairo Bold",       css: "'Cairo'",             sample: "بِسْمِ اللَّهِ" },
-{ id: "noto",      name: "Noto Naskh",       css: "'Noto Naskh Arabic'", sample: "بِسْمِ اللَّهِ" },
-{ id: "lateef",    name: "Lateef",           css: "'Lateef'",            sample: "بِسْمِ اللَّهِ" },
-{ id: "harmattan", name: "Harmattan",        css: "'Harmattan'",         sample: "بِسْمِ اللَّهِ" },
-{ id: "markazi",   name: "Markazi Text",     css: "'Markazi Text'",      sample: "بِسْمِ اللَّهِ" },
-{ id: "ruqaa",     name: "Aref Ruqaa",       css: "'Aref Ruqaa'",        sample: "بِسْمِ اللَّهِ" },
+  { id: "reem",      name: "Reem Kufi",        css: "'Reem Kufi'",         sample: "بِسْمِ اللَّهِ" },
+  { id: "scheher",   name: "Scheherazade",     css: "'Scheherazade New'",  sample: "بِسْمِ اللَّهِ" },
+  { id: "cairo",     name: "Cairo Bold",       css: "'Cairo'",             sample: "بِسْمِ اللَّهِ" },
+  { id: "noto",      name: "Noto Naskh",       css: "'Noto Naskh Arabic'", sample: "بِسْمِ اللَّهِ" },
+  { id: "lateef",    name: "Lateef",           css: "'Lateef'",            sample: "بِسْمِ اللَّهِ" },
+  { id: "harmattan", name: "Harmattan",        css: "'Harmattan'",         sample: "بِسْمِ اللَّهِ" },
+  { id: "markazi",   name: "Markazi Text",     css: "'Markazi Text'",      sample: "بِسْمِ اللَّهِ" },
+  { id: "ruqaa",     name: "Aref Ruqaa",       css: "'Aref Ruqaa'",        sample: "بِسْمِ اللَّهِ" },
 ];
 
 const THEMES = {
@@ -787,18 +787,24 @@ async function resumeAudioCtx() {
   return ctx;
 }
 
+// عداد الجيل: كل استدعاء جديد يُبطل الاستدعاءات السابقة الجارية
+let _recGen = 0;
+
 async function playRecitationAudio() {
+  if (S.exporting) return;            // التصدير يدير الصوت بنفسه
   stopRecitationAudio();
-  if (!S.verses.length) return;
+  if (!S.verses.length || !S.playing) return;
   const aya = S.verses[S.currentAya];
   if (!aya) return;
+
+  const myGen = ++_recGen;            // رقم جيل هذا الاستدعاء
   const surahNum = parseInt($("surah-sel").value) || 1;
   const reciter = S.reciters.find(r => r.id === radioVal("reciter")) || S.reciters[0];
   const url = `${AUDIO_BASE}/${reciter.folder}/${String(surahNum).padStart(3, "0")}${String(aya.numberInSurah).padStart(3, "0")}.mp3`;
   $("audio-status").textContent = `⏳ جاري التحميل — ${reciter.name} الآية ${aya.numberInSurah}`;
 
   const onEnded = () => {
-    if (!S.playing) return;
+    if (!S.playing || myGen !== _recGen) return; // تجاهل إذا صدر استدعاء أحدث
     if (S.currentAya < S.verses.length - 1) {
       S.currentAya++; S.elapsed = 0; playRecitationAudio(); updateAyaUI();
     } else {
@@ -806,47 +812,54 @@ async function playRecitationAudio() {
     }
   };
 
-  // ── الطريقة الأساسية: fetch + AudioBuffer (تحل CORS + الموجة + التصدير) ──
+  // ── الطريقة الأساسية: fetch + AudioBuffer ──────────────
+  // نُضيف { cache: 'force-cache' } لتجنب إعادة جلب نفس الملف
   try {
     const ctx = await resumeAudioCtx();
-    const res = await fetch(url);
+    if (myGen !== _recGen) return;    // تحقق بعد await
+
+    const res = await fetch(url, { cache: "force-cache" });
     if (!res.ok) throw new Error("HTTP " + res.status);
     const arrayBuf = await res.arrayBuffer();
+    if (myGen !== _recGen) return;    // تحقق بعد كل await
+
     const audioBuf = await ctx.decodeAudioData(arrayBuf);
+    if (myGen !== _recGen) return;
 
     S.ayaDurations[S.currentAya] = audioBuf.duration;
 
     const gainNode = ctx.createGain();
     gainNode.gain.value = gv("rec-vol") / 100;
-
     const source = ctx.createBufferSource();
     source.buffer = audioBuf;
-    // source → gain → destination (للسماع)
     source.connect(gainNode);
     gainNode.connect(ctx.destination);
-    // source → analyser (للموجة والتصدير)
     gainNode.connect(S.analyser);
-
     source.start(0);
     source.onended = onEnded;
-
     S.recAudioSource = source;
     S.recGainNode = gainNode;
     $("audio-status").textContent = `▶️ ${reciter.name} — الآية ${aya.numberInSurah}`;
   } catch (err) {
-    // ── Fallback: HTMLAudioElement بدون crossOrigin ──
+    if (myGen !== _recGen) return;
+    // ── Fallback: HTMLAudioElement ──────────────────────
     console.warn("AudioBuffer fetch failed, using HTMLAudioElement:", err.message);
-    const a = new Audio(url);
+    const a = new Audio();
+    a.crossOrigin = null;             // لا نُجبر CORS في الـfallback
     a.volume = gv("rec-vol") / 100;
-    a.onloadedmetadata = () => { S.ayaDurations[S.currentAya] = a.duration || 6; };
+    a.onloadedmetadata = () => {
+      if (myGen === _recGen) S.ayaDurations[S.currentAya] = a.duration || 6;
+    };
     a.onended = onEnded;
     a.onerror = () => {
+      if (myGen !== _recGen) return;
       S.ayaDurations[S.currentAya] = parseFloat(gv("aya-dur")) || 6;
-      toast("⚠️ تعذر تحميل الصوت — تحقق من اسم المجلد", "error");
+      $("audio-status").textContent = `❌ فشل التحميل — ${reciter.name} الآية ${aya.numberInSurah}`;
     };
-    a.play().catch(() => toast("⚠️ اضغط تشغيل أولاً", "info"));
+    a.src = url;
+    a.play().catch(() => {});
     S.recAudioEl = a;
-    $("audio-status").textContent = `▶️ ${reciter.name} — الآية ${aya.numberInSurah} (بدون موجة)`;
+    $("audio-status").textContent = `▶️ ${reciter.name} — الآية ${aya.numberInSurah}`;
   }
 }
 
@@ -1019,19 +1032,60 @@ async function startExport(type) {
   const audioBuffers = await Promise.all(S.verses.map(async (aya, i) => {
     const url = `${AUDIO_BASE}/${reciter.folder}/${String(surahNum).padStart(3,"0")}${String(aya.numberInSurah).padStart(3,"0")}.mp3`;
     try {
-      const res = await fetch(url);
+      // محاولة أولى: fetch مع cache للسرعة
+      const res = await fetch(url, { cache: "force-cache" });
       if (!res.ok) throw new Error("HTTP " + res.status);
       const ab  = await res.arrayBuffer();
       const buf = await ctx.decodeAudioData(ab);
       loaded++;
       $("rec-sub").textContent = `⏳ تحميل الصوت… ${loaded}/${S.verses.length}`;
       return buf;
-    } catch (e) {
-      loaded++;
-      $("rec-sub").textContent = `⏳ تحميل الصوت… ${loaded}/${S.verses.length} ⚠️`;
-      return null;
+    } catch (e1) {
+      // محاولة ثانية: fetch بدون cache (قد يحل بعض مشاكل CORS)
+      try {
+        const res2 = await fetch(url, { cache: "no-store", mode: "cors" });
+        if (!res2.ok) throw new Error("HTTP " + res2.status);
+        const ab2  = await res2.arrayBuffer();
+        const buf2 = await ctx.decodeAudioData(ab2);
+        loaded++;
+        $("rec-sub").textContent = `⏳ تحميل الصوت… ${loaded}/${S.verses.length}`;
+        return buf2;
+      } catch (e2) {
+        // محاولة ثالثة: HTMLAudioElement → MediaElementSource
+        // هذه تعمل دائماً حتى بدون CORS لكن لا تُعيد AudioBuffer
+        // نستخدمها فقط للحصول على المدة ونضع null للـ buffer
+        try {
+          const dur = await new Promise((res, rej) => {
+            const a = new Audio();
+            a.crossOrigin = "anonymous";
+            a.onloadedmetadata = () => res(a.duration);
+            a.onerror = () => {
+              // جرب بدون crossOrigin كملاذ أخير
+              const a2 = new Audio(url);
+              a2.onloadedmetadata = () => res(a2.duration);
+              a2.onerror = () => rej(new Error("audio load failed"));
+              a2.load();
+            };
+            a.src = url;
+            a.load();
+            setTimeout(() => rej(new Error("timeout")), 8000);
+          });
+          if (dur > 0) S.ayaDurations[i] = dur;
+        } catch (_) {}
+        loaded++;
+        $("rec-sub").textContent = `⏳ تحميل الصوت… ${loaded}/${S.verses.length} ⚠️`;
+        return null;
+      }
     }
   }));
+
+  // تحقق: هل نجح تحميل أي buffer؟
+  const loadedCount = audioBuffers.filter(b => b !== null).length;
+  if (loadedCount === 0) {
+    // جميع الملفات فشلت CORS — استخدم HTMLAudioElement للتصدير
+    toast("⚠️ تعذر جلب الصوت عبر fetch — سيتم التصدير بالصوت الأساسي", "info");
+    // استمر بدون صوت مجدول (MediaRecorder يلتقط ما يصله من AudioContext)
+  }
 
   if (S.exportCancel) { $("rec-ov").classList.remove("on"); return; }
 
@@ -1086,20 +1140,53 @@ async function startExport(type) {
   if (S.exportCancel) { mr.stop(); return; }
 
   const audioStartTime = ctx.currentTime + 0.05;
-  S.exportSources = []; // ← في S حتى يصل إليها cancelExport فوراً
+  S.exportSources = [];
 
-  audioBuffers.forEach((buf, i) => {
-    if (!buf) return;
-    const gain = ctx.createGain();
-    gain.gain.value = gainVal;
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.connect(gain);
-    gain.connect(ctx.destination);
-    gain.connect(S.analyser);
-    src.start(audioStartTime + ayaStarts[i]);
-    S.exportSources.push({ src, gain });
-  });
+  const hasBuffers = audioBuffers.some(b => b !== null);
+
+  if (hasBuffers) {
+    // ── المسار الأفضل: AudioBuffers مجدولة مسبقاً ──────
+    audioBuffers.forEach((buf, i) => {
+      if (!buf) return;
+      const gain = ctx.createGain();
+      gain.gain.value = gainVal;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(gain);
+      gain.connect(ctx.destination);
+      gain.connect(S.analyser);
+      src.start(audioStartTime + ayaStarts[i]);
+      S.exportSources.push({ src, gain });
+    });
+  } else {
+    // ── المسار البديل: تشغيل تسلسلي بـ HTMLAudioElement ──
+    // يُستخدم عندما تفشل fetch (CORS محدود)
+    // نشغل الآية الأولى الآن، والبقية يُشغَّلن عبر onEnded
+    console.warn("Export: using HTMLAudioElement fallback (fetch CORS failed)");
+    $("rec-sub").textContent = "⚠️ وضع الصوت البديل (CORS) — الجودة ستنخفض قليلاً";
+
+    const playExportAya = (idx) => {
+      if (idx >= S.verses.length || S.exportCancel) return;
+      const aya2 = S.verses[idx];
+      const url2 = `${AUDIO_BASE}/${reciter.folder}/${String(surahNum).padStart(3,"0")}${String(aya2.numberInSurah).padStart(3,"0")}.mp3`;
+      const a2 = new Audio(url2);
+      a2.volume = gainVal;
+      // توصيل HTMLAudioElement بـ AudioContext للتسجيل
+      try {
+        const msrc = ctx.createMediaElementSource(a2);
+        const gain2 = ctx.createGain();
+        gain2.gain.value = gainVal;
+        msrc.connect(gain2);
+        gain2.connect(ctx.destination);
+        gain2.connect(S.analyser);
+        S.exportSources.push({ src: { stop: () => { try{a2.pause();}catch(_){} }, onended: null }, gain: gain2 });
+      } catch (_) {}
+      a2.onended = () => playExportAya(idx + 1);
+      a2.play().catch(() => {});
+    };
+    // ابدأ بعد 50ms لضمان جاهزية MediaRecorder
+    setTimeout(() => playExportAya(0), 50);
+  }
 
   // صوت الخلفية (من البداية)
   if (S.bgAudioEl) { S.bgAudioEl.currentTime = 0; S.bgAudioEl.play().catch(() => {}); }
@@ -1160,7 +1247,7 @@ async function startExport(type) {
       $("rec-fill").style.width = pct + "%";
       $("rec-pct").textContent  = pct + "%";
       $("rec-sub").textContent  =
-      `🎬 ${targetFrame}/${totalFrames} — الآية ${ci + 1}/${S.verses.length} — ${fmt(projectTime)} / ${fmt(totalDuration)}`;
+        `🎬 ${targetFrame}/${totalFrames} — الآية ${ci + 1}/${S.verses.length} — ${fmt(projectTime)} / ${fmt(totalDuration)}`;
       updateAyaUI();
     }
 
@@ -1330,8 +1417,10 @@ async function loadLocalFonts(showToast = false) {
       if (!item.name || !item.file) continue;
       if (S.allFonts.find(x => x.name === item.name)) continue;
       try {
-        // استخدام encodeURI لمعالجة المسافات في أسماء الملفات
-        const fontUrl = `./fonts/${encodeURI(item.file)}`;
+        // لا نستخدم encodeURI — fonts.json قد تحتوي على أسماء خام أو مُرمَّزة مسبقاً
+        // نُرمِّز فقط مرة واحدة بعد التأكد من أن الاسم خام
+        const rawFile = item.file.includes('%') ? decodeURIComponent(item.file) : item.file;
+        const fontUrl = `./fonts/${encodeURIComponent(rawFile)}`;
         const face = new FontFace(item.name, `url(${fontUrl})`);
         await face.load();
         document.fonts.add(face);
@@ -1383,12 +1472,12 @@ function renderReciters() {
     const div = document.createElement("div");
     div.className = "rctr-card";
     div.innerHTML = `
-    <input type="radio" name="reciter" id="rc${i}" value="${r.id}" ${i === 0 ? "checked" : ""}>
-    <label for="rc${i}">
-    <span class="rf">${r.flag}</span>${r.name}
-    <span class="edit-reciter" data-id="${r.id}" data-name="${r.name}" data-flag="${r.flag}" data-folder="${r.folder}">✏️</span>
-    <span class="del-reciter" data-id="${r.id}">🗑️</span>
-    </label>
+      <input type="radio" name="reciter" id="rc${i}" value="${r.id}" ${i === 0 ? "checked" : ""}>
+      <label for="rc${i}">
+        <span class="rf">${r.flag}</span>${r.name}
+        <span class="edit-reciter" data-id="${r.id}" data-name="${r.name}" data-flag="${r.flag}" data-folder="${r.folder}">✏️</span>
+        <span class="del-reciter" data-id="${r.id}">🗑️</span>
+      </label>
     `;
     grid.appendChild(div);
   });
