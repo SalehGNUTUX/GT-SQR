@@ -7,13 +7,22 @@
 
 // ── RECITERS REGISTRY ──────────────────────────────────
 const RECITERS_LIST = [
-  { id: "alafasy",  name: "مشاري العفاسي",        flag: "🇰🇼", folder: "Alafasy_128kbps" },
-  { id: "ghamdi",   name: "سعد الغامدي",           flag: "🇸🇦", folder: "Ghamadi_40kbps" },
-  { id: "minshawi", name: "المنشاوي مرتل",         flag: "🇪🇬", folder: "Minshawy_Murattal_128kbps" },
-  { id: "husary",   name: "محمود الحصري",          flag: "🇪🇬", folder: "Husary_128kbps" },
-  { id: "shaatri",  name: "أبو بكر الشاطري",       flag: "🇸🇦", folder: "abu_bakr_ash-shaatree_128kbps" },
-  { id: "maher",    name: "ماهر المعيقلي",         flag: "🇸🇦", folder: "MaherAlMuaiqly128kbps" },
+  { id: "alafasy",    name: "مشاري العفاسي",            flag: "🇰🇼", folder: "Alafasy_128kbps" },
+  { id: "ghamdi",     name: "سعد الغامدي",               flag: "🇸🇦", folder: "Ghamadi_40kbps" },
+  { id: "minshawi",   name: "المنشاوي مرتل",             flag: "🇪🇬", folder: "Minshawy_Murattal_128kbps" },
+  { id: "husary",     name: "محمود الحصري",              flag: "🇪🇬", folder: "Husary_128kbps" },
+  { id: "shaatri",    name: "أبو بكر الشاطري",           flag: "🇸🇦", folder: "abu_bakr_ash-shaatree_128kbps" },
+  { id: "maher",      name: "ماهر المعيقلي",             flag: "🇸🇦", folder: "MaherAlMuaiqly128kbps" },
+  // ── رواية ورش ──
+  { id: "yassin_w",   name: "ياسين الجزائري (ورش)",      flag: "🇩🇿", folder: "warsh/warsh_yassin_al_jazaery_64kbps" },
+  { id: "hussary_w",  name: "الحصري مرتل (ورش)",         flag: "🇪🇬", folder: "warsh/Husary_Murattal_warsh_128kbps" },
 ];
+
+// دالة مساعدة: بناء URL الصوت مع تنظيف الشرطات الزائدة
+function buildAudioUrl(folder, surahNum, ayaNum) {
+  const cleanFolder = folder.replace(/^\/+|\/+$/g, ''); // إزالة / من البداية والنهاية
+  return `${AUDIO_BASE}/${cleanFolder}/${String(surahNum).padStart(3,"0")}${String(ayaNum).padStart(3,"0")}.mp3`;
+}
 
 const BUILT_IN_FONTS = [
   { id: "amiri",     name: "Amiri Quran",     css: "'Amiri Quran'",       sample: "بِسْمِ اللَّهِ" },
@@ -800,7 +809,7 @@ async function playRecitationAudio() {
   const myGen = ++_recGen;            // رقم جيل هذا الاستدعاء
   const surahNum = parseInt($("surah-sel").value) || 1;
   const reciter = S.reciters.find(r => r.id === radioVal("reciter")) || S.reciters[0];
-  const url = `${AUDIO_BASE}/${reciter.folder}/${String(surahNum).padStart(3, "0")}${String(aya.numberInSurah).padStart(3, "0")}.mp3`;
+  const url = buildAudioUrl(reciter.folder, surahNum, aya.numberInSurah);
   $("audio-status").textContent = `⏳ جاري التحميل — ${reciter.name} الآية ${aya.numberInSurah}`;
 
   const onEnded = () => {
@@ -1030,7 +1039,7 @@ async function startExport(type) {
   let loaded = 0;
 
   const audioBuffers = await Promise.all(S.verses.map(async (aya, i) => {
-    const url = `${AUDIO_BASE}/${reciter.folder}/${String(surahNum).padStart(3,"0")}${String(aya.numberInSurah).padStart(3,"0")}.mp3`;
+    const url = buildAudioUrl(reciter.folder, surahNum, aya.numberInSurah);
     try {
       // محاولة أولى: fetch مع cache للسرعة
       const res = await fetch(url, { cache: "force-cache" });
@@ -1100,7 +1109,7 @@ async function startExport(type) {
     acc += getDur(i);
   }
   const totalDuration = acc;
-  const FPS           = 30;
+  const FPS           = parseInt(gv("export-fps") || "30") || 30;
   const FRAME_MS      = 1000 / FPS;
   const totalFrames   = Math.ceil(totalDuration * FPS);
 
@@ -1116,8 +1125,9 @@ async function startExport(type) {
   const mimeT  = type === "mp4" ? mime4 : mime_w;
   const mime   = MediaRecorder.isTypeSupported(mimeT) ? mimeT : "video/webm";
 
+  const vbrMbps = parseInt(gv("export-vbr") || "8") || 8;
   const mr = new MediaRecorder(new MediaStream(tracks), {
-    mimeType: mime, videoBitsPerSecond: 8_000_000, audioBitsPerSecond: 128_000
+    mimeType: mime, videoBitsPerSecond: vbrMbps * 1_000_000, audioBitsPerSecond: 128_000
   });
   S.mediaRecorder = mr;
   mr.ondataavailable = e => { if (e.data.size > 0) S.exportChunks.push(e.data); };
@@ -1168,7 +1178,7 @@ async function startExport(type) {
     const playExportAya = (idx) => {
       if (idx >= S.verses.length || S.exportCancel) return;
       const aya2 = S.verses[idx];
-      const url2 = `${AUDIO_BASE}/${reciter.folder}/${String(surahNum).padStart(3,"0")}${String(aya2.numberInSurah).padStart(3,"0")}.mp3`;
+      const url2 = buildAudioUrl(reciter.folder, surahNum, aya2.numberInSurah);
       const a2 = new Audio(url2);
       a2.volume = gainVal;
       // توصيل HTMLAudioElement بـ AudioContext للتسجيل
@@ -1417,10 +1427,11 @@ async function loadLocalFonts(showToast = false) {
       if (!item.name || !item.file) continue;
       if (S.allFonts.find(x => x.name === item.name)) continue;
       try {
-        // لا نستخدم encodeURI — fonts.json قد تحتوي على أسماء خام أو مُرمَّزة مسبقاً
-        // نُرمِّز فقط مرة واحدة بعد التأكد من أن الاسم خام
-        const rawFile = item.file.includes('%') ? decodeURIComponent(item.file) : item.file;
-        const fontUrl = `./fonts/${encodeURIComponent(rawFile)}`;
+        // نُرمِّز مرة واحدة بعد فك أي ترميز سابق لتجنب %2520
+        let rawFile = item.file;
+        try { rawFile = decodeURIComponent(rawFile); } catch(_) {}
+        // encodeURIComponent يُرمّز المسافات كـ %20 — صحيح لمكونات URL
+        const fontUrl = `./fonts/${rawFile.split('/').map(encodeURIComponent).join('/')}`;
         const face = new FontFace(item.name, `url(${fontUrl})`);
         await face.load();
         document.fonts.add(face);
@@ -1646,16 +1657,22 @@ function goTab(name) {
 
 // ── MOBILE PANEL ────────────────────────────────────
 let _mobLayout = localStorage.getItem("mob_layout") || "vert";
+let _panelSize = parseInt(localStorage.getItem("panel_size") || "62");
 
 function initMobileLayout() {
   if (window.innerWidth > 760) return;
   setMobLayout(_mobLayout, false);
+  applyPanelSize(_panelSize);
+  const sl = $("panel-size-slider");
+  const lb = $("panel-size-lbl");
+  if (sl) sl.value = _panelSize;
+  if (lb) lb.textContent = _panelSize + "٪";
 }
 
 function setMobLayout(mode, save = true) {
   _mobLayout = mode;
   if (save) localStorage.setItem("mob_layout", mode);
-  document.body.classList.remove("mob-horiz", "mob-full");
+  document.body.classList.remove("mob-horiz");
   ["lay-vert","lay-horiz","lay-full"].forEach(id => {
     const btn = $(id); if (btn) btn.classList.remove("on");
   });
@@ -1663,12 +1680,31 @@ function setMobLayout(mode, save = true) {
     document.body.classList.add("mob-horiz");
     const btn = $("lay-horiz"); if (btn) btn.classList.add("on");
   } else if (mode === "full") {
-    document.body.classList.add("mob-full");
+    applyPanelSize(90);
     const btn = $("lay-full"); if (btn) btn.classList.add("on");
     openMobilePanel();
+    return;
   } else {
     const btn = $("lay-vert"); if (btn) btn.classList.add("on");
   }
+  applyPanelSize(_panelSize);
+}
+
+function applyPanelSize(pct) {
+  const isHoriz = document.body.classList.contains("mob-horiz");
+  if (isHoriz) {
+    document.documentElement.style.setProperty("--panel-w", pct + "vw");
+  } else {
+    document.documentElement.style.setProperty("--panel-h", pct + "vh");
+  }
+}
+
+function onPanelSizeChange(val) {
+  _panelSize = parseInt(val);
+  localStorage.setItem("panel_size", _panelSize);
+  const lb = $("panel-size-lbl");
+  if (lb) lb.textContent = _panelSize + "٪";
+  applyPanelSize(_panelSize);
 }
 
 function toggleMobilePanel() {
@@ -1679,15 +1715,17 @@ function toggleMobilePanel() {
 function openMobilePanel() {
   $("panel").classList.add("mob-open");
   $("mob-backdrop").classList.add("on");
-  $("mob-toggle").textContent = "✕";
+  const t = $("mob-toggle");
+  if (t) { t.textContent = "✕ إغلاق"; t.classList.add("active"); }
 }
 function closeMobilePanel() {
   $("panel").classList.remove("mob-open");
   $("mob-backdrop").classList.remove("on");
-  $("mob-toggle").textContent = "☰";
+  const t = $("mob-toggle");
+  if (t) { t.textContent = "🛠 الأدوات"; t.classList.remove("active"); }
 }
 
-// ── سحب لإغلاق الـ Panel (swipe down) ──────────────
+// ── سحب لإغلاق الـ Panel ──────────────────────────
 function initPanelSwipe(e) {
   const startY = e.touches[0].clientY;
   const panel  = $("panel");
@@ -1698,12 +1736,19 @@ function initPanelSwipe(e) {
   };
   const onEnd = () => {
     panel.style.transform = "";
-    if (diff > 80) closeMobilePanel();
+    if (diff > 70) closeMobilePanel();
     document.removeEventListener("touchmove", onMove);
     document.removeEventListener("touchend",  onEnd);
   };
   document.addEventListener("touchmove", onMove, { passive: true });
   document.addEventListener("touchend",  onEnd);
+}
+
+// ── SETTINGS FUNCTIONS ───────────────────────────────
+function resetAllSettings() {
+  if (!confirm("⚠️ سيتم إعادة جميع الإعدادات للافتراضي — هل تريد المتابعة؟")) return;
+  localStorage.clear();
+  location.reload();
 }
 
 // ══════════════════════════════════════════════════════
