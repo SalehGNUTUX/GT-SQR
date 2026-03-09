@@ -3,16 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
-<meta name="description" content="GT-SQR — GnuTux Short Quran Reels">
-<meta name="theme-color" content="#040c08">
+<meta name="description" content="GT-SQR — GnuTux Short Quran Reels — صانع مقاطع القرآن الكريم الاحترافي">
+<meta name="application-name" content="GT-SQR">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GT-SQR">
+<meta name="msapplication-TileColor" content="#0a2e1e">
+<meta name="msapplication-TileImage" content="gt-sqr-icons/192x192/gt-sqr-icon.png">
+<meta name="theme-color" content="#0a2e1e">
 <title>GT-SQR — صانع ريلز القرآن الكريم</title>
-<link rel="manifest" href="manifest.json">
-<!-- أيقونات PWA و favicon (المسارات الصحيحة) -->
-<link rel="icon" type="image/png" sizes="32x32" href="gt-sqr-icons/32x32/gt-sqr-icon.png">
-<link rel="icon" type="image/png" sizes="16x16" href="gt-sqr-icons/16x16/gt-sqr-icon.png">
+<link rel="manifest" href="manifest.json" crossorigin="use-credentials">
+<!-- favicon وأيقونات PWA -->
+<link rel="icon" type="image/png" sizes="16x16"  href="gt-sqr-icons/16x16/gt-sqr-icon.png">
+<link rel="icon" type="image/png" sizes="32x32"  href="gt-sqr-icons/32x32/gt-sqr-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="gt-sqr-icons/192x192/gt-sqr-icon.png">
+<link rel="icon" type="image/png" sizes="512x512" href="gt-sqr-icons/512x512/gt-sqr-icon.png">
 <link rel="shortcut icon" href="gt-sqr-icons/32x32/gt-sqr-icon.png">
-<link rel="apple-touch-icon" sizes="192x192" href="gt-sqr-icons/192x192/gt-sqr-icon.png">
+<!-- Apple Touch Icons -->
+<link rel="apple-touch-icon" href="gt-sqr-icons/192x192/gt-sqr-icon.png">
+<link rel="apple-touch-icon" sizes="152x152" href="gt-sqr-icons/192x192/gt-sqr-icon.png">
+<link rel="apple-touch-icon" sizes="167x167" href="gt-sqr-icons/192x192/gt-sqr-icon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="gt-sqr-icons/192x192/gt-sqr-icon.png">
 <!-- خطوط جوجل -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,6 +48,15 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--fu);direction:rtl;d
 ::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:var(--bg1)}
 ::-webkit-scrollbar-thumb{background:var(--p);border-radius:6px}
+
+/* PWA INSTALL BAR */
+#pwa-bar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:500;background:linear-gradient(135deg,var(--bg3),#0d2a18);border-top:2px solid var(--pl);padding:10px 16px;align-items:center;gap:10px;box-shadow:0 -4px 24px rgba(0,0,0,.6);animation:slideUp .35s cubic-bezier(.32,.72,0,1)}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+#pwa-bar .pwa-icon{width:40px;height:40px;border-radius:9px;flex-shrink:0}
+#pwa-bar .pwa-txt{flex:1;min-width:0}
+#pwa-bar .pwa-txt strong{display:block;font-size:12px;color:var(--al);font-weight:900}
+#pwa-bar .pwa-txt small{font-size:10px;color:var(--t2)}
+#pwa-bar .pwa-btns{display:flex;gap:6px;flex-shrink:0}
 
 /* HEADER */
 #hdr{height:70px;flex-shrink:0;background:linear-gradient(90deg,#0c1a0e,var(--bg1));border-bottom:1px solid var(--b1);padding:0 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 16px rgba(0,0,0,.4);z-index:100}
@@ -808,6 +829,20 @@ body.offline .offline-badge{display:block}
   <button class="btn btn-g bsm" onclick="togglePlay()">👁️ <span>معاينة</span></button>
   <button class="btn btn-p bsm" onclick="startExport('webm')">🎬 <span>WebM</span></button>
   <button class="btn btn-a" onclick="startExport('mp4')">📥 MP4</button>
+</div>
+
+<!-- شريط تثبيت PWA -->
+<div id="pwa-bar">
+  <img src="gt-sqr-icons/192x192/gt-sqr-icon.png" class="pwa-icon" alt="GT-SQR"
+       onerror="this.src='gt-sqr-icons/512x512/gt-sqr-icon.png'">
+  <div class="pwa-txt">
+    <strong>تثبيت GT-SQR</strong>
+    <small>استخدمه بدون إنترنت · أيقونة في الشاشة الرئيسية</small>
+  </div>
+  <div class="pwa-btns">
+    <button class="btn btn-a bsm" onclick="installPwa()">📥 تثبيت</button>
+    <button class="btn btn-g bsm" onclick="hidePwaBanner()">✕</button>
+  </div>
 </div>
 
 <script src="app.js"></script>
