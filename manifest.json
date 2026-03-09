@@ -1,26 +1,60 @@
 {
+  "id": "gt-sqr-gnutux",
   "name": "GT-SQR — صانع ريلز القرآن الكريم",
   "short_name": "GT-SQR",
-  "description": "gnutux Short Quran Reels — صانع ريلز القرآن المتقدم",
+  "description": "GnuTux Short Quran Reels — صانع مقاطع القرآن الكريم الاحترافي",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#020b05",
-  "theme_color": "#040c08",
+  "theme_color": "#0a2e1e",
   "orientation": "any",
   "lang": "ar",
   "dir": "rtl",
   "icons": [
     {
+      "src": "gt-sqr-icons/16x16/gt-sqr-icon.png",
+      "sizes": "16x16",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "gt-sqr-icons/32x32/gt-sqr-icon.png",
+      "sizes": "32x32",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "gt-sqr-icons/192x192/gt-sqr-icon.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "gt-sqr-icons/192x192/gt-sqr-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "gt-sqr-icons/512x512/gt-sqr-icon.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "gt-sqr-icons/512x512/gt-sqr-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshot/Screenshot_20260309_214310.png",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "GT-SQR واجهة التطبيق"
     }
   ],
   "categories": ["utilities", "productivity"],
@@ -28,6 +62,7 @@
     {
       "name": "مشروع جديد",
       "url": "./index.html",
+      "icons": [{ "src": "gt-sqr-icons/192x192/gt-sqr-icon.png", "sizes": "192x192" }],
       "description": "بدء مشروع ريلز جديد"
     }
   ]
