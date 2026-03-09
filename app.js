@@ -661,110 +661,134 @@ function drawWave(ctx, W, H, ts) {
 
   ctx.save();
 
+  // ── قاعدة موحدة: كل الأشكال تنمو من الأسفل لأعلى ──
+  // الخط الأساسي (baseline): أسفل = H-4 | أعلى = 4
+  // كل bh تُطرح من الـbaseline لأعلى
+
+  const BASE  = pos === "top" ? 4 + wh : H - 4;  // نقطة الانطلاق الثابتة
+  const SIGN  = pos === "top" ? 1 : -1;           // +1 أسفل-لأعلى | -1 أعلى-لأسفل
+  // SIGN=-1 لأن y في canvas تزيد للأسفل، فالنمو للأعلى = ناقص
+
   if (shape === "bars") {
+    // ── أعمدة: قاعدة ثابتة، القمة تتحرك للأعلى ──────
     const bw = W / n;
     for (let i = 0; i < n; i++) {
-      const bh = (S.waveData[i] / 255) * wh;
-      const alpha = 0.4 + 0.5 * (S.waveData[i] / 255);
+      const bh    = (S.waveData[i] / 255) * wh;
+      const alpha = 0.4 + 0.55 * (S.waveData[i] / 255);
       ctx.fillStyle = `rgba(${cr},${cg},${cb},${alpha})`;
-      // الأعمدة تنمو من الأسفل لأعلى (y0 = قمة العمود، الأسفل ثابت)
-      const y0 = pos === "top" ? 4 : H - 4 - bh;
-      ctx.fillRect(i * bw, y0, bw * 0.78, bh);
+      const yTop = BASE + SIGN * bh;   // قمة العمود
+      ctx.fillRect(i * bw, yTop, bw * 0.78, bh);
     }
+
   } else if (shape === "wave") {
-    const y0 = pos === "top" ? wh + 4 : H - wh - 4;
+    // ── موجة: الخط الأساسي ثابت، الموجة ترتفع عنه ──
     ctx.lineWidth = 2.2; ctx.globalAlpha = 0.85;
     ctx.strokeStyle = col;
+    // خط الأساس (شبه شفاف)
+    ctx.globalAlpha = 0.18;
+    ctx.beginPath(); ctx.moveTo(0, BASE); ctx.lineTo(W, BASE); ctx.stroke();
+    // الموجة الفعلية
+    ctx.globalAlpha = 0.85;
     ctx.beginPath();
     for (let i = 0; i < n; i++) {
       const bh = (S.waveData[i] / 255) * wh;
-      const x = i * (W / n);
-      const y = pos === "top" ? y0 - bh : y0 + bh;
+      const x  = i * (W / n);
+      const y  = BASE + SIGN * bh;
       i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     }
     ctx.stroke();
+    // تعبئة المساحة بين الخط الأساسي والموجة
+    ctx.globalAlpha = 0.10;
+    ctx.fillStyle = col;
+    ctx.lineTo(W, BASE); ctx.lineTo(0, BASE); ctx.closePath(); ctx.fill();
+
   } else if (shape === "dots") {
+    // ── نقاط: ترتفع من الخط الأساسي ──────────────────
     for (let i = 0; i < n; i += 2) {
       const bh = (S.waveData[i] / 255) * wh;
-      const x = i * (W / n);
-      const y0 = pos === "top" ? wh + 4 - bh : H - wh - 4 + bh;
-      const r = 1.5 + (S.waveData[i] / 255) * 3;
-      ctx.globalAlpha = 0.6 + 0.35 * (S.waveData[i] / 255);
+      const x  = i * (W / n) + (W / n);
+      const y  = BASE + SIGN * bh;     // النقطة عند قمة الارتفاع
+      const r  = 1.8 + (S.waveData[i] / 255) * 3.2;
+      ctx.globalAlpha = 0.55 + 0.4 * (S.waveData[i] / 255);
       ctx.fillStyle = col;
-      ctx.beginPath(); ctx.arc(x, y0, r, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      // ذيل خفيف للنقطة
+      ctx.globalAlpha = 0.12;
+      ctx.fillRect(x - 1, Math.min(y, BASE), 2, bh);
     }
+
   } else if (shape === "mirror") {
-    // موجة متماثلة — مرآة من المنتصف
-    const cy = pos === "top" ? wh + 4 : H - wh - 4;
-    ctx.lineWidth = 1.8; ctx.globalAlpha = 0.8;
-    // نصف علوي
+    // ── مرآة: المنتصف ثابت، النصفان ينموان للخارج ──
+    const cy = pos === "top" ? 4 + wh / 2 : H - 4 - wh / 2;
+    const hw = wh / 2;
+    ctx.lineWidth = 1.8;
+    // نصف علوي (للأعلى)
+    ctx.globalAlpha = 0.9;
     ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.9)`;
     ctx.beginPath();
     for (let i = 0; i < n; i++) {
-      const bh = (S.waveData[i] / 255) * (wh / 2);
-      const x = i * (W / n);
-      i === 0 ? ctx.moveTo(x, cy - bh) : ctx.lineTo(x, cy - bh);
+      const bh = (S.waveData[i] / 255) * hw;
+      ctx.lineTo(i * (W / n), cy - bh);
     }
     ctx.stroke();
-    // نصف سفلي (مرآة)
-    ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.55)`;
+    // نصف سفلي (للأسفل)
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.6)`;
     ctx.beginPath();
     for (let i = 0; i < n; i++) {
-      const bh = (S.waveData[i] / 255) * (wh / 2);
-      const x = i * (W / n);
-      i === 0 ? ctx.moveTo(x, cy + bh) : ctx.lineTo(x, cy + bh);
+      const bh = (S.waveData[i] / 255) * hw;
+      ctx.lineTo(i * (W / n), cy + bh);
     }
     ctx.stroke();
-    // تعبئة المنطقة الوسطى
+    // تعبئة بين النصفين
     ctx.globalAlpha = 0.08;
     ctx.fillStyle = col;
     ctx.beginPath(); ctx.moveTo(0, cy);
     for (let i = 0; i < n; i++) {
-      const bh = (S.waveData[i] / 255) * (wh / 2);
+      const bh = (S.waveData[i] / 255) * hw;
       ctx.lineTo(i * (W / n), cy - bh);
     }
     for (let i = n - 1; i >= 0; i--) {
-      const bh = (S.waveData[i] / 255) * (wh / 2);
+      const bh = (S.waveData[i] / 255) * hw;
       ctx.lineTo(i * (W / n), cy + bh);
     }
     ctx.closePath(); ctx.fill();
 
   } else if (shape === "circle") {
-    // موجة دائرية في المنتصف
+    // ── دائرة: تنبثق للخارج من المركز ────────────────
     const cx = W / 2, cy = H / 2;
     const baseR = Math.min(W, H) * 0.09;
     ctx.lineWidth = 2; ctx.globalAlpha = 0.85;
     ctx.beginPath();
     for (let i = 0; i <= n; i++) {
-      const idx = i % n;
-      const amp = (S.waveData[idx] / 255) * wh * 0.5;
+      const idx   = i % n;
+      const amp   = (S.waveData[idx] / 255) * wh * 0.5;
       const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
       const r = baseR + amp;
-      const x = cx + Math.cos(angle) * r;
-      const y = cy + Math.sin(angle) * r;
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      i === 0 ? ctx.moveTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r)
+              : ctx.lineTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r);
     }
     ctx.closePath();
-    const gr = ctx.createRadialGradient(cx, cy, baseR * 0.5, cx, cy, baseR + wh * 0.5);
-    gr.addColorStop(0, `rgba(${cr},${cg},${cb},0.3)`);
-    gr.addColorStop(1, `rgba(${cr},${cg},${cb},0.85)`);
+    const gr = ctx.createRadialGradient(cx, cy, baseR * 0.4, cx, cy, baseR + wh * 0.55);
+    gr.addColorStop(0, `rgba(${cr},${cg},${cb},0.25)`);
+    gr.addColorStop(1, `rgba(${cr},${cg},${cb},0.9)`);
     ctx.strokeStyle = gr; ctx.stroke();
     ctx.globalAlpha = 0.06; ctx.fillStyle = col; ctx.fill();
 
   } else if (shape === "spectrum") {
-    // طيف متدرج الألوان
+    // ── طيف: أعمدة تنمو من الأسفل لأعلى + توهج ──────
     const bw = W / n;
     for (let i = 0; i < n; i++) {
-      const bh = (S.waveData[i] / 255) * wh;
-      const hue = (i / n) * 240 + 160; // من أزرق إلى ذهبي
+      const bh    = (S.waveData[i] / 255) * wh;
+      const hue   = (i / n) * 200 + 140;
       const alpha = 0.35 + 0.6 * (S.waveData[i] / 255);
-      ctx.fillStyle = `hsla(${hue},80%,65%,${alpha})`;
-      const y0 = pos === "top" ? wh + 4 - bh : H - wh - 4;
-      ctx.fillRect(i * bw, y0, bw * 0.82, bh);
-      // خط توهج فوق العمود
+      ctx.fillStyle = `hsla(${hue},80%,62%,${alpha})`;
+      const yTop = BASE + SIGN * bh;
+      ctx.fillRect(i * bw, yTop, bw * 0.82, bh);
+      // خط توهج عند قمة كل عمود
       if (bh > 4) {
-        ctx.fillStyle = `hsla(${hue},100%,88%,${alpha * 0.7})`;
-        ctx.fillRect(i * bw, y0, bw * 0.82, 2);
+        ctx.fillStyle = `hsla(${hue},100%,90%,${alpha * 0.75})`;
+        ctx.fillRect(i * bw, yTop, bw * 0.82, 2);
       }
     }
   }
