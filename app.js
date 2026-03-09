@@ -87,9 +87,75 @@ document.addEventListener("DOMContentLoaded", async () => {
   startRenderLoop();
   await loadLocalFonts(false);
   await loadSurahList();
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => { });
+  // ── تسجيل Service Worker ──────────────────────────
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js")
+      .then(reg => {
+        console.log("[PWA] Service Worker registered:", reg.scope);
+        // تحقق من التحديثات
+        reg.addEventListener("updatefound", () => {
+          const nw = reg.installing;
+          nw.addEventListener("statechange", () => {
+            if (nw.state === "installed" && navigator.serviceWorker.controller) {
+              toast("🔄 تحديث متاح — أعد تحميل الصفحة للتطبيق", "info");
+            }
+          });
+        });
+      })
+      .catch(err => console.warn("[PWA] SW registration failed:", err));
+  }
   initMobileLayout();
+  initPwaInstall();
 });
+
+// ══════════════════════════════════════════════════════
+//  PWA INSTALL PROMPT
+// ══════════════════════════════════════════════════════
+let _pwaPrompt = null;
+
+function initPwaInstall() {
+  // التقط حدث التثبيت قبل أن يُعرضه المتصفح تلقائياً
+  window.addEventListener("beforeinstallprompt", e => {
+    e.preventDefault();          // امنع الظهور التلقائي
+    _pwaPrompt = e;
+    showPwaBanner();             // أظهر شريط التثبيت المخصص
+    console.log("[PWA] Install prompt captured");
+  });
+
+  // بعد التثبيت الناجح
+  window.addEventListener("appinstalled", () => {
+    _pwaPrompt = null;
+    hidePwaBanner();
+    toast("✅ تم تثبيت GT-SQR بنجاح!", "success");
+    console.log("[PWA] App installed");
+  });
+}
+
+function showPwaBanner() {
+  const bar = $("pwa-bar");
+  if (bar) bar.style.display = "flex";
+}
+
+function hidePwaBanner() {
+  const bar = $("pwa-bar");
+  if (bar) bar.style.display = "none";
+}
+
+async function installPwa() {
+  if (!_pwaPrompt) {
+    toast("⚠️ التثبيت غير متاح في هذا المتصفح أو التطبيق مثبت مسبقاً", "info");
+    return;
+  }
+  _pwaPrompt.prompt();
+  const { outcome } = await _pwaPrompt.userChoice;
+  if (outcome === "accepted") {
+    toast("⏳ جاري التثبيت…", "info");
+  } else {
+    toast("تم الإلغاء", "info");
+  }
+  _pwaPrompt = null;
+  hidePwaBanner();
+}
 
 // ══════════════════════════════════════════════════════
 //  ALWAYS-RUNNING RENDER LOOP
