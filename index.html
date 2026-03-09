@@ -10,7 +10,9 @@
 <!-- أيقونات PWA و favicon (المسارات الصحيحة) -->
 <link rel="icon" type="image/png" sizes="32x32" href="gt-sqr-icons/32x32/gt-sqr-icon.png">
 <link rel="icon" type="image/png" sizes="16x16" href="gt-sqr-icons/16x16/gt-sqr-icon.png">
-<link rel="apple-touch-icon" href="gt-sqr-icons/192x192/gt-sqr-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="gt-sqr-icons/192x192/gt-sqr-icon.png">
+<link rel="shortcut icon" href="gt-sqr-icons/32x32/gt-sqr-icon.png">
+<link rel="apple-touch-icon" sizes="192x192" href="gt-sqr-icons/192x192/gt-sqr-icon.png">
 <!-- خطوط جوجل -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,15 +38,15 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--fu);direction:rtl;d
 ::-webkit-scrollbar-thumb{background:var(--p);border-radius:6px}
 
 /* HEADER */
-#hdr{height:52px;flex-shrink:0;background:linear-gradient(90deg,#0c1a0e,var(--bg1));border-bottom:1px solid var(--b1);padding:0 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 16px rgba(0,0,0,.4);z-index:100}
+#hdr{height:68px;flex-shrink:0;background:linear-gradient(90deg,#0c1a0e,var(--bg1));border-bottom:1px solid var(--b1);padding:0 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 16px rgba(0,0,0,.4);z-index:100}
 .logo{display:flex;align-items:center;gap:9px}
-.logo-icon{width:48px;height:48px;border-radius:9px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--pd),var(--p),var(--a));cursor:pointer;flex-shrink:0;box-shadow:0 2px 10px rgba(201,162,39,.3);transition:transform .35s cubic-bezier(.34,1.56,.64,1),box-shadow .3s,filter .3s}
-.logo-icon img{width:44px;height:44px;object-fit:contain;display:block;border-radius:7px}
+.logo-icon{width:58px;height:58px;border-radius:11px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--pd),var(--p),var(--a));cursor:pointer;flex-shrink:0;box-shadow:0 2px 14px rgba(201,162,39,.4);transition:transform .35s cubic-bezier(.34,1.56,.64,1),box-shadow .3s,filter .3s}
+.logo-icon img{width:100%;height:100%;object-fit:contain;display:block;border-radius:9px}
 .logo-icon .fi{font-size:28px;display:none}
 .logo-icon:hover{transform:rotate(12deg) scale(1.18);box-shadow:0 4px 20px rgba(201,162,39,.7);filter:brightness(1.15)}
 .logo-icon:active{transform:rotate(-8deg) scale(.88);transition:transform .1s}
-.logo-text h1{font-size:15px;font-weight:900;letter-spacing:1.8px;background:linear-gradient(90deg,var(--al),var(--pl));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.logo-text small{font-size:8px;color:var(--t3);display:block;direction:ltr;letter-spacing:.7px}
+.logo-text h1{font-size:17px;font-weight:900;letter-spacing:1.8px;background:linear-gradient(90deg,var(--al),var(--pl));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-text small{font-size:9px;color:var(--t3);display:block;direction:ltr;letter-spacing:.7px}
 .hdr-r{display:flex;gap:5px;align-items:center;flex-shrink:0}
 
 /* LAYOUT */
@@ -221,25 +223,116 @@ body.offline .offline-badge{display:block}
 #logo-preview{display:none;margin-top:6px;text-align:center}
 #logo-img-preview{max-width:100%;max-height:50px;border-radius:4px}
 
-/* RESPONSIVE */
+/* ══ MOBILE LAYOUT ══════════════════════════════════ */
+#mob-toggle{display:none;width:36px;height:36px;border:1px solid var(--b1);border-radius:var(--r);background:var(--bg3);color:var(--t1);font-size:18px;cursor:pointer;align-items:center;justify-content:center;flex-shrink:0;transition:var(--tr)}
+#mob-toggle:hover{border-color:var(--pl);color:var(--al)}
+/* بار العرض (أفقي/عمودي) — يظهر فقط على الموبايل */
+#mob-layout-bar{display:none;background:var(--bg1);border-bottom:1px solid var(--b1);padding:4px 12px;gap:6px;align-items:center;flex-shrink:0;z-index:150}
+.mob-lay-btn{flex:1;padding:4px 0;border:1px solid var(--b1);border-radius:var(--r);background:var(--bg3);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;font-family:var(--fu);transition:var(--tr);text-align:center}
+.mob-lay-btn.on{background:rgba(10,92,54,.3);border-color:var(--pl);color:var(--al)}
+/* الـbackdrop */
+#mob-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:190;backdrop-filter:blur(3px)}
+#mob-backdrop.on{display:block}
+
 @media(max-width:760px){
-  #app{grid-template-columns:1fr;grid-template-rows:auto 1fr}
-  #panel{border-left:none;border-top:1px solid var(--b1);max-height:48vh;min-height:0;order:2}
-  #preview{order:1;min-height:35vw}
+  body{overflow:hidden}
+  #mob-toggle{display:flex}
+  #mob-layout-bar{display:flex}
   .logo-text small{display:none}
   .ex-info{display:none}
+
+  /* ── الوضع الافتراضي: عمودي (Panel كـ Bottom Sheet) ── */
+  #app{
+    grid-template-columns:1fr;
+    grid-template-rows:1fr;
+    position:relative;
+  }
+  #preview{
+    position:absolute;
+    inset:0;
+    padding:6px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+  }
+  /* Panel = Bottom Sheet */
+  #panel{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    height:62vh;
+    z-index:200;
+    border-top:2px solid var(--pl);
+    border-left:none;
+    border-radius:16px 16px 0 0;
+    transform:translateY(100%);
+    transition:transform .3s cubic-bezier(.32,.72,0,1);
+    box-shadow:0 -6px 30px rgba(0,0,0,.7);
+    overflow:hidden;
+  }
+  #panel.mob-open{transform:translateY(0)}
+  /* مقبض الـsheet */
+  #panel::before{
+    content:'';
+    display:block;
+    width:40px;height:4px;
+    background:var(--b2);
+    border-radius:2px;
+    margin:8px auto 0;
+    flex-shrink:0;
+  }
+  /* وضع أفقي: Panel من اليمين، Preview يبقى ظاهراً */
+  body.mob-horiz #app{
+    display:grid;
+    grid-template-columns:1fr;
+    height:100%;
+  }
+  body.mob-horiz #preview{
+    position:relative;
+    inset:auto;
+    flex:1;
+    min-height:0;
+  }
+  body.mob-horiz #panel{
+    position:fixed;
+    top:0; bottom:0; right:0; left:auto;
+    width:min(88vw,340px);
+    height:auto;
+    border-top:none;
+    border-left:2px solid var(--pl);
+    border-radius:0;
+    transform:translateX(100%);
+    transition:transform .3s cubic-bezier(.32,.72,0,1);
+  }
+  body.mob-horiz #panel.mob-open{transform:translateX(0)}
+  body.mob-horiz #panel::before{display:none}
+  /* وضع كامل: Panel يأخذ الشاشة */
+  body.mob-full #panel{
+    height:85vh;
+  }
+  /* canvas مرن */
+  .cw{max-width:calc(100vw - 12px);max-height:calc(100vh - 150px)}
+  #cv{max-width:100%;max-height:100%}
 }
 @media(max-width:480px){
-  #hdr{padding:0 10px}
-  #exbar{padding:0 8px;gap:4px}
+  #hdr{padding:0 10px;height:56px}
+  #exbar{padding:0 6px;gap:3px}
   .hdr-r .btn span{display:none}
-  #panel{max-height:50vh}
+  .logo-icon{width:44px;height:44px}
+  .logo-text h1{font-size:13px}
+  .btn-a,.btn-p{padding:5px 8px;font-size:9px}
+  .btn-a span,.btn-p span{display:none}
 }
+/* Touch swipe handle */
+#panel-handle{display:none;height:22px;flex-shrink:0;cursor:grab;align-items:center;justify-content:center}
+#panel-handle::after{content:'';display:block;width:38px;height:4px;background:var(--b2);border-radius:2px}
+@media(max-width:760px){#panel-handle{display:flex}}
 </style>
 </head>
 <body>
 
 <div class="offline-badge">📵 غير متصل</div>
+<div id="mob-backdrop" onclick="closeMobilePanel()"></div>
 <div id="toast-c"></div>
 
 <div id="rec-ov">
@@ -275,12 +368,22 @@ body.offline .offline-badge{display:block}
   <div class="hdr-r">
     <button class="btn btn-g bsm" onclick="openModal('tpl-modal')">💾 <span>حفظ</span></button>
     <button class="btn btn-g bsm" onclick="goTab('tpl')">📂 <span>القوالب</span></button>
+    <button id="mob-toggle" onclick="toggleMobilePanel()" title="الأدوات">☰</button>
   </div>
 </header>
+
+<!-- شريط اختيار تخطيط الموبايل -->
+<div id="mob-layout-bar">
+  <span style="font-size:9px;color:var(--t3);white-space:nowrap">📱 عرض:</span>
+  <button class="mob-lay-btn on" id="lay-vert" onclick="setMobLayout('vert')">⬆ عمودي</button>
+  <button class="mob-lay-btn" id="lay-horiz" onclick="setMobLayout('horiz')">⬅ أفقي</button>
+  <button class="mob-lay-btn" id="lay-full" onclick="setMobLayout('full')" style="max-width:70px">⛶ كامل</button>
+</div>
 
 <div id="app">
 
   <div id="panel">
+    <div id="panel-handle" ontouchstart="initPanelSwipe(event)"></div>
     <div class="tabs">
       <button class="tab-btn on" data-tab="rec"><span class="ti">📖</span><span>التلاوة</span></button>
       <button class="tab-btn" data-tab="scene"><span class="ti">🎬</span><span>المشهد</span></button>
@@ -519,12 +622,13 @@ body.offline .offline-badge{display:block}
         <div class="sec">
           <div class="sec-t">🖼️ شعار مخصص</div>
           <div class="fu-area">
-            <input type="file" accept="image/*" id="logo-upload" onchange="onLogoUpload(this)">
+            <input type="file" accept="image/*,video/quicktime,video/mp4,.mov,.webm" id="logo-upload" onchange="onLogoUpload(this)">
             <div class="fu-icon">🖼️</div>
-            <div class="fu-txt">رفع شعار (PNG, SVG, JPG) بخلفية شفافة إن أمكن</div>
+            <div class="fu-txt">رفع شعار صورة أو فيديو<br><small>PNG · SVG · JPG · <strong>MOV</strong> (شفاف) · WebM</small></div>
           </div>
           <div id="logo-preview" style="display:none">
-            <img id="logo-img-preview" alt="">
+            <img id="logo-img-preview" alt="" style="max-width:100%;max-height:50px;border-radius:4px">
+            <video id="logo-vid-preview" muted loop autoplay playsinline style="display:none;max-width:100%;max-height:60px;border-radius:4px;background:repeating-conic-gradient(#3a3a3a 0% 25%,#2a2a2a 0% 50%) 0/12px 12px"></video>
           </div>
           <div class="grid2" style="margin-top:7px;">
             <div class="fg">
@@ -557,7 +661,7 @@ body.offline .offline-badge{display:block}
         <div class="sec">
           <div class="sec-t">📊 الموجات الصوتية</div>
           <div class="tgg"><span class="tgl">تفعيل الموجات</span><label class="tg"><input type="checkbox" id="wave-on" checked><span class="tgs"></span></label></div>
-          <div class="fg" style="margin-top:7px"><label class="fl">شكل الموجة</label><div class="rg"><div class="rc"><input type="radio" name="ws" id="ws1" value="bars" checked><label for="ws1"><span class="ri">📊</span><span>أعمدة</span></label></div><div class="rc"><input type="radio" name="ws" id="ws2" value="wave"><label for="ws2"><span class="ri">〰️</span><span>موجة</span></label></div><div class="rc"><input type="radio" name="ws" id="ws3" value="dots"><label for="ws3"><span class="ri">⠿</span><span>نقاط</span></label></div></div></div>
+          <div class="fg" style="margin-top:7px"><label class="fl">شكل الموجة</label><div class="rg c2"><div class="rc"><input type="radio" name="ws" id="ws1" value="bars" checked><label for="ws1"><span class="ri">📊</span><span>أعمدة</span></label></div><div class="rc"><input type="radio" name="ws" id="ws2" value="wave"><label for="ws2"><span class="ri">〰️</span><span>موجة</span></label></div><div class="rc"><input type="radio" name="ws" id="ws3" value="dots"><label for="ws3"><span class="ri">⠿</span><span>نقاط</span></label></div><div class="rc"><input type="radio" name="ws" id="ws4" value="mirror"><label for="ws4"><span class="ri">🪞</span><span>مرآة</span></label></div><div class="rc"><input type="radio" name="ws" id="ws5" value="circle"><label for="ws5"><span class="ri">⭕</span><span>دائرة</span></label></div><div class="rc"><input type="radio" name="ws" id="ws6" value="spectrum"><label for="ws6"><span class="ri">🌈</span><span>طيف</span></label></div></div></div>
           <div class="grid2">
             <div class="fg"><label class="fl">اللون</label><div class="cpg"><input type="color" id="wave-col" value="#c9a227"></div></div>
             <div class="fg"><label class="fl">الموضع</label><select class="fc" id="wave-pos"><option value="bottom">أسفل</option><option value="top">أعلى</option></select></div>
@@ -652,7 +756,7 @@ body.offline .offline-badge{display:block}
 </div>
 
 <div id="exbar">
-  <div class="ex-info" id="ex-info">جاهز • التصدير يتضمن صوت الخلفية فقط (صوت المقرئ لا يدعم التصدير بسبب CORS)</div>
+  <div class="ex-info" id="ex-info">جاهز • يتضمن التصدير صوت القرآن وصوت الخلفية بمدة دقيقة</div>
   <button class="btn btn-g bsm" onclick="togglePlay()">👁️ <span>معاينة</span></button>
   <button class="btn btn-p bsm" onclick="startExport('webm')">🎬 <span>WebM</span></button>
   <button class="btn btn-a" onclick="startExport('mp4')">📥 MP4</button>
