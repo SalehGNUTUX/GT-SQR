@@ -2,37 +2,42 @@
   {
     "name": "Amiri Quran",
     "file": "amiri-quran.ttf",
-    "sample": "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ"
+    "sample": "بِسْمِ اللَّهِ"
   },
   {
     "name": "Uthmanic Hafs",
     "file": "UthmanicHafs1%20Ver13.otf",
-    "sample": "الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ"
+    "sample": "بِسْمِ اللَّهِ"
   },
   {
     "name": "Noto Sans Arabic Thin",
     "file": "NotoSansArabic-Thin.ttf",
-    "sample": "مَالِكِ يَوْمِ الدِّينِ"
+    "sample": "بِسْمِ اللَّهِ"
   },
   {
     "name": "Noto Sans Arabic ExtraLight",
     "file": "NotoSansArabic-ExtraLight.ttf",
-    "sample": "إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ"
+    "sample": "بِسْمِ اللَّهِ"
   },
   {
     "name": "Noto Sans Arabic Regular",
     "file": "NotoSansArabic-Regular.ttf",
-    "sample": "اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ"
+    "sample": "بِسْمِ اللَّهِ"
   },
   {
     "name": "Ubuntu Arabic Regular",
     "file": "Ubuntu%20Arabic%20Regular.otf",
-    "sample": "صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ"
+    "sample": "بِسْمِ اللَّهِ"
+  },
+  {
+    "name": "KAHandNaskh-Regular",
+    "file": "KAHandNaskh-Regular.ttf",
+    "sample": "بِسْمِ اللَّهِ"
   },
   {
     "name": "Ubuntu Arabic Bold",
     "file": "Ubuntu%20Arabic%20Bold.ttf",
-    "sample": "غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ"
+    "sample": "بِسْمِ اللَّهِ"
   },
   {
     "name": "Arslan Wessam",
