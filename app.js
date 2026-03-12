@@ -1,39 +1,37 @@
 // ═══════════════════════════════════════════════════════
 //  GT-SQR v2.0 — GnuTux Short Quran Reels
-//  Author: SalehGNUTUX | License: GPLv2
-//  آخر تحديث: 2026 - إصلاح شامل للمشاكل
+//  Author: SalehGNUTUX | License: GPLv3
+//  آخر تحديث: 2026 - نسخة الويب مع مزايا سطح المكتب
 // ═══════════════════════════════════════════════════════
 "use strict";
 
 // ── RECITERS REGISTRY ──────────────────────────────────
 const RECITERS_LIST = [
   { id: "alafasy",    name: "مشاري العفاسي",            flag: "🇰🇼", folder: "Alafasy_128kbps" },
-  { id: "ghamdi",     name: "سعد الغامدي",               flag: "🇸🇦", folder: "Ghamadi_40kbps" },
-  { id: "minshawi",   name: "المنشاوي مرتل",             flag: "🇪🇬", folder: "Minshawy_Murattal_128kbps" },
-  { id: "husary",     name: "محمود الحصري",              flag: "🇪🇬", folder: "Husary_128kbps" },
-  { id: "shaatri",    name: "أبو بكر الشاطري",           flag: "🇸🇦", folder: "abu_bakr_ash-shaatree_128kbps" },
-  { id: "maher",      name: "ماهر المعيقلي",             flag: "🇸🇦", folder: "MaherAlMuaiqly128kbps" },
-  // ── رواية ورش ──
-  { id: "yassin_w",   name: "ياسين الجزائري (ورش)",      flag: "🇩🇿", folder: "warsh/warsh_yassin_al_jazaery_64kbps" },
-  { id: "hussary_w",  name: "الحصري مرتل (ورش)",         flag: "🇪🇬", folder: "warsh/Husary_Murattal_warsh_128kbps" },
+{ id: "ghamdi",     name: "سعد الغامدي",               flag: "🇸🇦", folder: "Ghamadi_40kbps" },
+{ id: "minshawi",   name: "المنشاوي مرتل",             flag: "🇪🇬", folder: "Minshawy_Murattal_128kbps" },
+{ id: "husary",     name: "محمود الحصري",              flag: "🇪🇬", folder: "Husary_128kbps" },
+{ id: "shaatri",    name: "أبو بكر الشاطري",           flag: "🇸🇦", folder: "abu_bakr_ash-shaatree_128kbps" },
+{ id: "maher",      name: "ماهر المعيقلي",             flag: "🇸🇦", folder: "MaherAlMuaiqly128kbps" },
+{ id: "yassin_w",   name: "ياسين الجزائري (ورش)",      flag: "🇩🇿", folder: "warsh/warsh_yassin_al_jazaery_64kbps" },
+{ id: "hussary_w",  name: "الحصري مرتل (ورش)",         flag: "🇪🇬", folder: "warsh/Husary_Murattal_warsh_128kbps" },
 ];
 
-// دالة مساعدة: بناء URL الصوت مع تنظيف الشرطات الزائدة
 function buildAudioUrl(folder, surahNum, ayaNum) {
-  const cleanFolder = folder.replace(/^\/+|\/+$/g, ''); // إزالة / من البداية والنهاية
+  const cleanFolder = folder.replace(/^\/+|\/+$/g, '');
   return `${AUDIO_BASE}/${cleanFolder}/${String(surahNum).padStart(3,"0")}${String(ayaNum).padStart(3,"0")}.mp3`;
 }
 
 const BUILT_IN_FONTS = [
   { id: "amiri",     name: "Amiri Quran",     css: "'Amiri Quran'",       sample: "بِسْمِ اللَّهِ" },
-  { id: "reem",      name: "Reem Kufi",        css: "'Reem Kufi'",         sample: "بِسْمِ اللَّهِ" },
-  { id: "scheher",   name: "Scheherazade",     css: "'Scheherazade New'",  sample: "بِسْمِ اللَّهِ" },
-  { id: "cairo",     name: "Cairo Bold",       css: "'Cairo'",             sample: "بِسْمِ اللَّهِ" },
-  { id: "noto",      name: "Noto Naskh",       css: "'Noto Naskh Arabic'", sample: "بِسْمِ اللَّهِ" },
-  { id: "lateef",    name: "Lateef",           css: "'Lateef'",            sample: "بِسْمِ اللَّهِ" },
-  { id: "harmattan", name: "Harmattan",        css: "'Harmattan'",         sample: "بِسْمِ اللَّهِ" },
-  { id: "markazi",   name: "Markazi Text",     css: "'Markazi Text'",      sample: "بِسْمِ اللَّهِ" },
-  { id: "ruqaa",     name: "Aref Ruqaa",       css: "'Aref Ruqaa'",        sample: "بِسْمِ اللَّهِ" },
+{ id: "reem",      name: "Reem Kufi",        css: "'Reem Kufi'",         sample: "بِسْمِ اللَّهِ" },
+{ id: "scheher",   name: "Scheherazade",     css: "'Scheherazade New'",  sample: "بِسْمِ اللَّهِ" },
+{ id: "cairo",     name: "Cairo Bold",       css: "'Cairo'",             sample: "بِسْمِ اللَّهِ" },
+{ id: "noto",      name: "Noto Naskh",       css: "'Noto Naskh Arabic'", sample: "بِسْمِ اللَّهِ" },
+{ id: "lateef",    name: "Lateef",           css: "'Lateef'",            sample: "بِسْمِ اللَّهِ" },
+{ id: "harmattan", name: "Harmattan",        css: "'Harmattan'",         sample: "بِسْمِ اللَّهِ" },
+{ id: "markazi",   name: "Markazi Text",     css: "'Markazi Text'",      sample: "بِسْمِ اللَّهِ" },
+{ id: "ruqaa",     name: "Aref Ruqaa",       css: "'Aref Ruqaa'",        sample: "بِسْمِ اللَّهِ" },
 ];
 
 const THEMES = {
@@ -70,6 +68,7 @@ const S = {
   allFonts: [...BUILT_IN_FONTS],
   rafId: null,
   logoImg: null,
+  filteredSurahs: [],
 };
 
 // ══════════════════════════════════════════════════════
@@ -79,6 +78,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initTabs();
   initThemeChips();
   renderFontGrid();
+  restoreReciters();
   renderReciters();
   loadTemplates();
   generateParticles();
@@ -87,74 +87,238 @@ document.addEventListener("DOMContentLoaded", async () => {
   startRenderLoop();
   await loadLocalFonts(false);
   await loadSurahList();
-  // ── تسجيل Service Worker ──────────────────────────
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js")
-      .then(reg => {
-        console.log("[PWA] Service Worker registered:", reg.scope);
-        // تحقق من التحديثات
-        reg.addEventListener("updatefound", () => {
-          const nw = reg.installing;
-          nw.addEventListener("statechange", () => {
-            if (nw.state === "installed" && navigator.serviceWorker.controller) {
-              toast("🔄 تحديث متاح — أعد تحميل الصفحة للتطبيق", "info");
-            }
-          });
-        });
-      })
-      .catch(err => console.warn("[PWA] SW registration failed:", err));
-  }
+  restoreAllSettings();
+  initAutoSave();
+  initEventListeners();
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => { });
   initMobileLayout();
-  initPwaInstall();
 });
 
 // ══════════════════════════════════════════════════════
-//  PWA INSTALL PROMPT
+//  EVENT LISTENERS
 // ══════════════════════════════════════════════════════
-let _pwaPrompt = null;
-
-function initPwaInstall() {
-  // التقط حدث التثبيت قبل أن يُعرضه المتصفح تلقائياً
-  window.addEventListener("beforeinstallprompt", e => {
-    e.preventDefault();          // امنع الظهور التلقائي
-    _pwaPrompt = e;
-    showPwaBanner();             // أظهر شريط التثبيت المخصص
-    console.log("[PWA] Install prompt captured");
+function initEventListeners() {
+  // أزرار التبويبات
+  document.querySelectorAll(".tab-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      goTab(e.currentTarget.dataset.tab);
+      if (window.innerWidth <= 760) openMobilePanel();
+    });
   });
 
-  // بعد التثبيت الناجح
-  window.addEventListener("appinstalled", () => {
-    _pwaPrompt = null;
-    hidePwaBanner();
-    toast("✅ تم تثبيت GT-SQR بنجاح!", "success");
-    console.log("[PWA] App installed");
+  // أزرار التحكم
+  const loadVersesBtn = $("load-verses-btn");
+  if (loadVersesBtn) loadVersesBtn.addEventListener("click", loadVerses);
+
+  const toggleAddReciterBtn = $("toggle-add-reciter-btn");
+  if (toggleAddReciterBtn) toggleAddReciterBtn.addEventListener("click", toggleAddReciter);
+
+  const addCustomReciterBtn = $("add-custom-reciter-btn");
+  if (addCustomReciterBtn) addCustomReciterBtn.addEventListener("click", addCustomReciter);
+
+  const refreshFontsBtn = $("refresh-fonts-btn");
+  if (refreshFontsBtn) refreshFontsBtn.addEventListener("click", () => loadLocalFonts(true));
+
+  const customFontsInput = $("custom-fonts-input");
+  if (customFontsInput) customFontsInput.addEventListener("change", (e) => loadCustomFonts(e.target));
+
+  const togglePlayBtn = $("toggle-play-btn");
+  if (togglePlayBtn) togglePlayBtn.addEventListener("click", togglePlay);
+  const btnPlay = $("btn-play");
+  if (btnPlay) btnPlay.addEventListener("click", togglePlay);
+
+  const prevAyaBtn = $("prev-aya-btn");
+  if (prevAyaBtn) prevAyaBtn.addEventListener("click", prevAya);
+  const nextAyaBtn = $("next-aya-btn");
+  if (nextAyaBtn) nextAyaBtn.addEventListener("click", nextAya);
+
+  const pbar = $("pbar");
+  if (pbar) pbar.addEventListener("click", seekClick);
+
+  const openTplModalBtn = $("open-tpl-modal-btn");
+  if (openTplModalBtn) openTplModalBtn.addEventListener("click", () => openModal("tpl-modal"));
+  const openTplModalFromTab = $("open-tpl-modal-from-tab");
+  if (openTplModalFromTab) openTplModalFromTab.addEventListener("click", () => openModal("tpl-modal"));
+  const closeTplModalBtn = $("close-tpl-modal-btn");
+  if (closeTplModalBtn) closeTplModalBtn.addEventListener("click", () => closeModal("tpl-modal"));
+  const confirmSaveTemplateBtn = $("confirm-save-template-btn");
+  if (confirmSaveTemplateBtn) confirmSaveTemplateBtn.addEventListener("click", confirmSaveTemplate);
+
+  const cancelExportBtn = $("cancel-export-btn");
+  if (cancelExportBtn) cancelExportBtn.addEventListener("click", cancelExport);
+
+  const resetSettingsBtn = $("reset-settings-btn");
+  if (resetSettingsBtn) resetSettingsBtn.addEventListener("click", resetAllSettings);
+
+  // Radio buttons
+  document.querySelectorAll('input[name="fmt"]').forEach(radio => {
+    radio.addEventListener("change", onFmtChange);
+  });
+  document.querySelectorAll('input[name="bgt"]').forEach(radio => {
+    radio.addEventListener("change", onBgTypeChange);
+  });
+  const surahSel = $("surah-sel");
+  if (surahSel) surahSel.addEventListener("change", onSurahChange);
+  const transSel = $("trans-sel");
+  if (transSel) transSel.addEventListener("change", onTransChange);
+  const autoDur = $("auto-dur");
+  if (autoDur) autoDur.addEventListener("change", toggleManualDur);
+
+  // Range sliders
+  const sliders = [
+    { id: "aya-dur", outId: "aya-dur-v", unit: "s" },
+    { id: "trans-dur", outId: "trans-dur-v", unit: "s" },
+    { id: "orn-op", outId: "orn-op-v", unit: "%" },
+    { id: "dim", outId: "dim-v", unit: "%" },
+    { id: "bright", outId: "bright-v", unit: "%" },
+    { id: "satur", outId: "satur-v", unit: "%" },
+    { id: "fsize", outId: "fsize-v", unit: "%" },
+    { id: "lh", outId: "lh-v", unit: "" },
+    { id: "wm-size", outId: "wm-size-v", unit: "px" },
+    { id: "rec-vol", outId: "rec-vol-v", unit: "%" },
+    { id: "bg-vol", outId: "bg-vol-v", unit: "%" },
+    { id: "logo-size", outId: "logo-size-v", unit: "px" },
+    { id: "logo-opacity", outId: "logo-opacity-v", unit: "%" },
+    { id: "wave-h", outId: "wave-h-v", unit: "px" },
+    { id: "vig-str", outId: "vig-str-v", unit: "%" },
+    { id: "ov-op", outId: "ov-op-v", unit: "%" },
+    { id: "export-vbr", outId: "export-vbr-v", unit: " Mbps" },
+  ];
+  sliders.forEach(s => {
+    const el = $(s.id);
+    if (el) {
+      el.addEventListener("input", (e) => sv(e.target, s.outId, s.unit));
+      sv(el, s.outId, s.unit);
+    }
+  });
+
+  // Color picker + text sync
+  const syncPairs = [
+    { pick: "gc1", text: "gc1t" },
+    { pick: "gc2", text: "gc2t" },
+  ];
+  syncPairs.forEach(p => {
+    const pick = $(p.pick);
+    const text = $(p.text);
+    if (pick && text) {
+      pick.addEventListener("input", () => syncCP(p.pick, p.text));
+      text.addEventListener("input", () => syncCT(p.pick, p.text));
+    }
+  });
+
+  // File inputs
+  const bgImgInput = $("bg-img-input");
+  if (bgImgInput) bgImgInput.addEventListener("change", (e) => onBgMedia(e.target, "image"));
+  const bgVidInput = $("bg-vid-input");
+  if (bgVidInput) bgVidInput.addEventListener("change", (e) => onBgMedia(e.target, "video"));
+  const bgAudioInput = $("bg-audio-input");
+  if (bgAudioInput) bgAudioInput.addEventListener("change", (e) => onBgAudio(e.target));
+  const logoUpload = $("logo-upload");
+  if (logoUpload) logoUpload.addEventListener("change", (e) => onLogoUpload(e.target));
+  const removeLogoBtn = $("remove-logo-btn");
+  if (removeLogoBtn) removeLogoBtn.addEventListener("click", removeLogo);
+
+  // Search
+  const surahSearch = $("surah-search");
+  if (surahSearch) surahSearch.addEventListener("input", (e) => filterSurahs(e.target.value));
+
+  // Mobile
+  const panelSizeSlider = $("panel-size-slider");
+  if (panelSizeSlider) panelSizeSlider.addEventListener("input", (e) => onPanelSizeChange(e.target.value));
+  const layVert = $("lay-vert");
+  if (layVert) layVert.addEventListener("click", () => setMobLayout("vert"));
+  const layHoriz = $("lay-horiz");
+  if (layHoriz) layHoriz.addEventListener("click", () => setMobLayout("horiz"));
+  const layFull = $("lay-full");
+  if (layFull) layFull.addEventListener("click", () => setMobLayout("full"));
+  const mobToggle = $("mob-toggle");
+  if (mobToggle) mobToggle.addEventListener("click", toggleMobilePanel);
+  const panelHandle = $("panel-handle");
+  if (panelHandle) panelHandle.addEventListener("touchstart", initPanelSwipe);
+  const mobBackdrop = $("mob-backdrop");
+  if (mobBackdrop) mobBackdrop.addEventListener("click", closeMobilePanel);
+
+  // Export
+  const exportWebmBtn = $("export-webm-btn");
+  if (exportWebmBtn) exportWebmBtn.addEventListener("click", () => startExport("webm"));
+  const exportMp4Btn = $("export-mp4-btn");
+  if (exportMp4Btn) exportMp4Btn.addEventListener("click", () => startExport("mp4"));
+}
+
+// ══════════════════════════════════════════════════════
+//  حفظ واستعادة الإعدادات
+// ══════════════════════════════════════════════════════
+const SETTINGS_KEY = "gt_sqr_settings_v2";
+const RECITERS_KEY = "gt_sqr_reciters_v2";
+
+const SETTINGS_SKIP = new Set([
+  "tpl-name-inp","surah-sel","from-aya","to-aya","surah-search",
+  "bg-img-input","bg-vid-input","bg-audio-input",
+  "custom-fonts-input","logo-upload",
+  "ar-name","ar-flag","ar-folder",
+  "f1","f2","f3","panel-size-slider"
+]);
+
+function saveAllSettings() {
+  const saved = {};
+  document.querySelectorAll("input, select, textarea").forEach(el => {
+    if (!el.id || SETTINGS_SKIP.has(el.id)) return;
+    if (el.type === "checkbox") saved[el.id] = el.checked;
+    else if (el.type === "radio") { if (el.checked) saved["__radio_" + el.name] = el.value; }
+    else saved[el.id] = el.value;
+  });
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(saved)); } catch(e) {}
+}
+
+function restoreAllSettings() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}"); } catch(e) {}
+  if (!Object.keys(saved).length) return;
+
+  Object.entries(saved).forEach(([key, val]) => {
+    if (key.startsWith("__radio_")) {
+      const name = key.replace("__radio_", "");
+      const radio = document.querySelector(`input[name="${name}"][value="${val}"]`);
+      if (radio) { radio.checked = true; radio.dispatchEvent(new Event("change")); }
+    } else {
+      const el = $(key);
+      if (!el) return;
+      if (el.type === "file") return;
+      if (el.type === "checkbox") {
+        el.checked = !!val;
+        el.dispatchEvent(new Event("change"));
+      } else {
+        el.value = val;
+        el.dispatchEvent(new Event("input"));
+        el.dispatchEvent(new Event("change"));
+      }
+    }
   });
 }
 
-function showPwaBanner() {
-  const bar = $("pwa-bar");
-  if (bar) bar.style.display = "flex";
+function saveReciters() {
+  try { localStorage.setItem(RECITERS_KEY, JSON.stringify(S.reciters)); } catch(e) {}
 }
 
-function hidePwaBanner() {
-  const bar = $("pwa-bar");
-  if (bar) bar.style.display = "none";
+function restoreReciters() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(RECITERS_KEY) || "null");
+    if (saved && Array.isArray(saved) && saved.length > 0) {
+      S.reciters = saved;
+      renderReciters();
+    }
+  } catch(e) {}
 }
 
-async function installPwa() {
-  if (!_pwaPrompt) {
-    toast("⚠️ التثبيت غير متاح في هذا المتصفح أو التطبيق مثبت مسبقاً", "info");
-    return;
-  }
-  _pwaPrompt.prompt();
-  const { outcome } = await _pwaPrompt.userChoice;
-  if (outcome === "accepted") {
-    toast("⏳ جاري التثبيت…", "info");
-  } else {
-    toast("تم الإلغاء", "info");
-  }
-  _pwaPrompt = null;
-  hidePwaBanner();
+function initAutoSave() {
+  const debouncedSave = debounce(saveAllSettings, 500);
+  document.addEventListener("input", debouncedSave, true);
+  document.addEventListener("change", debouncedSave, true);
+}
+
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
 }
 
 // ══════════════════════════════════════════════════════
@@ -177,7 +341,7 @@ function startRenderLoop() {
 }
 
 function checkAyaAdvance() {
-  if (S.exporting) return; // لا تقاطع مع جدولة التصدير
+  if (S.exporting) return;
   const dur = S.ayaDurations[S.currentAya] || parseFloat(gv("aya-dur")) || 6;
   if (S.elapsed >= dur) {
     if (S.currentAya < S.verses.length - 1) {
@@ -486,7 +650,7 @@ function drawGrain(ctx, W, H) {
 }
 
 // ══════════════════════════════════════════════════════
-//  LOGO (صورة + فيديو MOV شفاف)
+//  LOGO
 // ══════════════════════════════════════════════════════
 function onLogoUpload(input) {
   const file = input.files[0];
@@ -494,18 +658,16 @@ function onLogoUpload(input) {
   const url = URL.createObjectURL(file);
   const isVideo = /\.(mov|mp4|webm)$/i.test(file.name) || file.type.startsWith("video/");
 
-  // أوقف شعار الفيديو السابق إن وجد
   if (S.logoVid) { try { S.logoVid.pause(); } catch (_) {} S.logoVid = null; }
   S.logoImg = null;
 
   if (isVideo) {
     const vid = document.createElement("video");
-    vid.src        = url;
-    vid.loop       = true;
-    vid.muted      = true;
-    vid.playsInline= true;
-    vid.autoplay   = true;
-    // MOV/ProRes4444 يدعم قناة ألفا في Safari/Chrome
+    vid.src = url;
+    vid.loop = true;
+    vid.muted = true;
+    vid.playsInline = true;
+    vid.autoplay = true;
     vid.onloadeddata = () => {
       S.logoVid = vid;
       vid.play().catch(() => {});
@@ -545,14 +707,13 @@ function drawLogo(ctx, W, H) {
   const src = S.logoVid || S.logoImg;
   if (!src) return;
 
-  const pos     = $("logo-pos").value;
-  const size    = parseInt(gv("logo-size")) || 60;
+  const pos = $("logo-pos").value;
+  const size = parseInt(gv("logo-size")) || 60;
   const opacity = (parseInt(gv("logo-opacity")) || 80) / 100;
 
-  // تحقق من جاهزية الفيديو
   if (S.logoVid && S.logoVid.readyState < 2) return;
 
-  const natW = src.naturalWidth  || src.videoWidth  || size;
+  const natW = src.naturalWidth || src.videoWidth || size;
   const natH = src.naturalHeight || src.videoHeight || size;
 
   let drawW = size;
@@ -563,16 +724,15 @@ function drawLogo(ctx, W, H) {
   const pad = 15;
   switch (pos) {
     case "br": x = W - drawW - pad; y = H - drawH - pad; break;
-    case "bl": x = pad;             y = H - drawH - pad; break;
-    case "tr": x = W - drawW - pad; y = pad;             break;
-    case "tl": x = pad;             y = pad;             break;
+    case "bl": x = pad; y = H - drawH - pad; break;
+    case "tr": x = W - drawW - pad; y = pad; break;
+    case "tl": x = pad; y = pad; break;
     case "center": x = (W - drawW) / 2; y = (H - drawH) / 2; break;
-    default:   x = W - drawW - pad; y = H - drawH - pad;
+    default: x = W - drawW - pad; y = H - drawH - pad;
   }
 
   ctx.save();
   ctx.globalAlpha = opacity;
-  // استخدم destination-out لحذف الخلفية في MOV إذا كانت قناة ألفا موجودة
   ctx.globalCompositeOperation = "source-over";
   ctx.drawImage(src, x, y, drawW, drawH);
   ctx.restore();
@@ -592,7 +752,6 @@ function drawVerse(ctx, W, H, ts) {
   const textEff = radioVal("te");
   const animType = radioVal("tanim");
 
-  // Animation alpha
   let alpha = 1;
   if (animType !== "none") {
     const dur = S.ayaDurations[S.currentAya] || 6;
@@ -606,7 +765,6 @@ function drawVerse(ctx, W, H, ts) {
   ctx.globalAlpha = alpha;
   setTextFx(ctx, textEff, txtCol, shdCol);
 
-  // Arabic text
   const lines = wrapText(ctx, aya.text, W * .85, fsz, font);
   const lineH = fsz * lh, totalH = lines.length * lineH;
   const hasT = S.translations[S.currentAya];
@@ -618,7 +776,6 @@ function drawVerse(ctx, W, H, ts) {
   ctx.font = `${fsz}px ${font}`; ctx.fillStyle = txtCol;
   lines.forEach((line, i) => ctx.fillText(line, W / 2, startY + i * lineH));
 
-  // Translation
   if (hasT) {
     const tfsPct = gv("tfs") / 100;
     const tfs = W * .03 * tfsPct * 1.6;
@@ -631,7 +788,6 @@ function drawVerse(ctx, W, H, ts) {
     tLines.forEach((tl, i) => ctx.fillText(tl, W / 2, tStart + i * tfs * 1.4));
   }
 
-  // Aya number badge
   ctx.globalAlpha = alpha * .6;
   ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
   ctx.font = `bold ${W * .022}px 'Cairo'`;
@@ -650,7 +806,7 @@ function setTextFx(ctx, eff, txtCol, shdCol) {
     neon: () => { ctx.shadowColor = "#00ff88"; ctx.shadowBlur = 22; },
     shadow3d: () => { ctx.shadowColor = `rgba(0,0,0,.85)`; ctx.shadowBlur = 0; ctx.shadowOffsetX = 4; ctx.shadowOffsetY = 5; },
     emboss: () => { ctx.shadowColor = "rgba(255,255,255,.25)"; ctx.shadowBlur = 0; ctx.shadowOffsetX = -2; ctx.shadowOffsetY = -2; },
-    outline: () => { ctx.shadowColor = "rgba(0,0,0,.9)"; ctx.shadowBlur = 0; ctx.lineWidth = 2; /* strokeText done separately */ },
+    outline: () => { ctx.shadowColor = "rgba(0,0,0,.9)"; ctx.shadowBlur = 0; ctx.lineWidth = 2; },
   };
   (fx[eff] || fx.none)();
 }
@@ -673,16 +829,12 @@ function wrapText(ctx, text, maxW, fsz, font) {
 // ══════════════════════════════════════════════════════
 function getWaveData(ts) {
   if (S.analyser) {
-    const full = new Uint8Array(S.analyser.frequencyBinCount); // 256 bins
+    const full = new Uint8Array(S.analyser.frequencyBinCount);
     S.analyser.getByteFrequencyData(full);
     if (full.some(v => v > 15)) {
-      // استخراج نطاق الصوت البشري فقط: 80Hz–3000Hz
-      // كل bin ≈ sampleRate/fftSize ≈ 86Hz
-      // bin 1 ≈ 86Hz  |  bin 35 ≈ 3010Hz
       const voiceStart = 1;
-      const voiceEnd   = Math.min(35, full.length - 1);
-      const voiceBins  = full.slice(voiceStart, voiceEnd + 1); // ~35 قيمة
-      // تمديدها لـ 64 نقطة (حجم waveData المعروض)
+      const voiceEnd = Math.min(35, full.length - 1);
+      const voiceBins = full.slice(voiceStart, voiceEnd + 1);
       const out = new Uint8Array(64);
       for (let i = 0; i < 64; i++) {
         const srcIdx = Math.floor(i / 64 * voiceBins.length);
@@ -696,17 +848,15 @@ function getWaveData(ts) {
   const data = new Uint8Array(n);
   const active = S.playing || (S.bgAudioEl && !S.bgAudioEl.paused);
   if (active) {
-    // محاكاة نطاق الصوت البشري (80Hz–3kHz): أساسيات + هارمونيكس القراءة
     for (let i = 0; i < n; i++) {
       const f = i / n;
-      // قمة واضحة في منتصف النطاق (الصوت البشري الأساسي ~300Hz–1kHz)
-      const fund    = Math.exp(-Math.pow(f - 0.25, 2) / 0.018) * 0.90;
-      const harm1   = Math.exp(-Math.pow(f - 0.48, 2) / 0.022) * 0.70;
-      const harm2   = Math.exp(-Math.pow(f - 0.70, 2) / 0.025) * 0.45;
-      const sublow  = f < 0.10 ? (1 - f / 0.10) * 0.55 : 0; // ديناميكية الصدر
+      const fund = Math.exp(-Math.pow(f - 0.25, 2) / 0.018) * 0.90;
+      const harm1 = Math.exp(-Math.pow(f - 0.48, 2) / 0.022) * 0.70;
+      const harm2 = Math.exp(-Math.pow(f - 0.70, 2) / 0.025) * 0.45;
+      const sublow = f < 0.10 ? (1 - f / 0.10) * 0.55 : 0;
       const envelope = fund + harm1 + harm2 + sublow;
       const pulse = 0.65 + 0.35 * Math.sin(ts * 4.2 + i * 0.4);
-      const slow  = 0.55 + 0.45 * Math.sin(ts * 1.3 + i * 0.2 + 1.1);
+      const slow = 0.55 + 0.45 * Math.sin(ts * 1.3 + i * 0.2 + 1.1);
       const noise = Math.random() * 0.05;
       const val = (pulse * 0.50 + slow * 0.40 + noise + 0.10) * envelope;
       data[i] = Math.min(255, Math.floor(val * 300));
@@ -727,68 +877,51 @@ function drawWave(ctx, W, H, ts) {
 
   ctx.save();
 
-  // ── قاعدة موحدة: كل الأشكال تنمو من الأسفل لأعلى ──
-  // الخط الأساسي (baseline): أسفل = H-4 | أعلى = 4
-  // كل bh تُطرح من الـbaseline لأعلى
-
-  const BASE  = pos === "top" ? 4 + wh : H - 4;  // نقطة الانطلاق الثابتة
-  const SIGN  = pos === "top" ? 1 : -1;           // +1 أسفل-لأعلى | -1 أعلى-لأسفل
-  // SIGN=-1 لأن y في canvas تزيد للأسفل، فالنمو للأعلى = ناقص
+  const BASE = pos === "top" ? 4 + wh : H - 4;
+  const SIGN = pos === "top" ? 1 : -1;
 
   if (shape === "bars") {
-    // ── أعمدة: قاعدة ثابتة، القمة تتحرك للأعلى ──────
     const bw = W / n;
     for (let i = 0; i < n; i++) {
-      const bh    = (S.waveData[i] / 255) * wh;
+      const bh = (S.waveData[i] / 255) * wh;
       const alpha = 0.4 + 0.55 * (S.waveData[i] / 255);
       ctx.fillStyle = `rgba(${cr},${cg},${cb},${alpha})`;
-      const yTop = BASE + SIGN * bh;   // قمة العمود
+      const yTop = BASE + SIGN * bh;
       ctx.fillRect(i * bw, yTop, bw * 0.78, bh);
     }
-
   } else if (shape === "wave") {
-    // ── موجة: الخط الأساسي ثابت، الموجة ترتفع عنه ──
     ctx.lineWidth = 2.2; ctx.globalAlpha = 0.85;
     ctx.strokeStyle = col;
-    // خط الأساس (شبه شفاف)
     ctx.globalAlpha = 0.18;
     ctx.beginPath(); ctx.moveTo(0, BASE); ctx.lineTo(W, BASE); ctx.stroke();
-    // الموجة الفعلية
     ctx.globalAlpha = 0.85;
     ctx.beginPath();
     for (let i = 0; i < n; i++) {
       const bh = (S.waveData[i] / 255) * wh;
-      const x  = i * (W / n);
-      const y  = BASE + SIGN * bh;
+      const x = i * (W / n);
+      const y = BASE + SIGN * bh;
       i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     }
     ctx.stroke();
-    // تعبئة المساحة بين الخط الأساسي والموجة
     ctx.globalAlpha = 0.10;
     ctx.fillStyle = col;
     ctx.lineTo(W, BASE); ctx.lineTo(0, BASE); ctx.closePath(); ctx.fill();
-
   } else if (shape === "dots") {
-    // ── نقاط: ترتفع من الخط الأساسي ──────────────────
     for (let i = 0; i < n; i += 2) {
       const bh = (S.waveData[i] / 255) * wh;
-      const x  = i * (W / n) + (W / n);
-      const y  = BASE + SIGN * bh;     // النقطة عند قمة الارتفاع
-      const r  = 1.8 + (S.waveData[i] / 255) * 3.2;
+      const x = i * (W / n) + (W / n);
+      const y = BASE + SIGN * bh;
+      const r = 1.8 + (S.waveData[i] / 255) * 3.2;
       ctx.globalAlpha = 0.55 + 0.4 * (S.waveData[i] / 255);
       ctx.fillStyle = col;
       ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-      // ذيل خفيف للنقطة
       ctx.globalAlpha = 0.12;
       ctx.fillRect(x - 1, Math.min(y, BASE), 2, bh);
     }
-
   } else if (shape === "mirror") {
-    // ── مرآة: المنتصف ثابت، النصفان ينموان للخارج ──
     const cy = pos === "top" ? 4 + wh / 2 : H - 4 - wh / 2;
     const hw = wh / 2;
     ctx.lineWidth = 1.8;
-    // نصف علوي (للأعلى)
     ctx.globalAlpha = 0.9;
     ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.9)`;
     ctx.beginPath();
@@ -797,7 +930,6 @@ function drawWave(ctx, W, H, ts) {
       ctx.lineTo(i * (W / n), cy - bh);
     }
     ctx.stroke();
-    // نصف سفلي (للأسفل)
     ctx.globalAlpha = 0.55;
     ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.6)`;
     ctx.beginPath();
@@ -806,7 +938,6 @@ function drawWave(ctx, W, H, ts) {
       ctx.lineTo(i * (W / n), cy + bh);
     }
     ctx.stroke();
-    // تعبئة بين النصفين
     ctx.globalAlpha = 0.08;
     ctx.fillStyle = col;
     ctx.beginPath(); ctx.moveTo(0, cy);
@@ -819,20 +950,18 @@ function drawWave(ctx, W, H, ts) {
       ctx.lineTo(i * (W / n), cy + bh);
     }
     ctx.closePath(); ctx.fill();
-
   } else if (shape === "circle") {
-    // ── دائرة: تنبثق للخارج من المركز ────────────────
     const cx = W / 2, cy = H / 2;
     const baseR = Math.min(W, H) * 0.09;
     ctx.lineWidth = 2; ctx.globalAlpha = 0.85;
     ctx.beginPath();
     for (let i = 0; i <= n; i++) {
-      const idx   = i % n;
-      const amp   = (S.waveData[idx] / 255) * wh * 0.5;
+      const idx = i % n;
+      const amp = (S.waveData[idx] / 255) * wh * 0.5;
       const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
       const r = baseR + amp;
       i === 0 ? ctx.moveTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r)
-              : ctx.lineTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r);
+      : ctx.lineTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r);
     }
     ctx.closePath();
     const gr = ctx.createRadialGradient(cx, cy, baseR * 0.4, cx, cy, baseR + wh * 0.55);
@@ -840,18 +969,15 @@ function drawWave(ctx, W, H, ts) {
     gr.addColorStop(1, `rgba(${cr},${cg},${cb},0.9)`);
     ctx.strokeStyle = gr; ctx.stroke();
     ctx.globalAlpha = 0.06; ctx.fillStyle = col; ctx.fill();
-
   } else if (shape === "spectrum") {
-    // ── طيف: أعمدة تنمو من الأسفل لأعلى + توهج ──────
     const bw = W / n;
     for (let i = 0; i < n; i++) {
-      const bh    = (S.waveData[i] / 255) * wh;
-      const hue   = (i / n) * 200 + 140;
+      const bh = (S.waveData[i] / 255) * wh;
+      const hue = (i / n) * 200 + 140;
       const alpha = 0.35 + 0.6 * (S.waveData[i] / 255);
       ctx.fillStyle = `hsla(${hue},80%,62%,${alpha})`;
       const yTop = BASE + SIGN * bh;
       ctx.fillRect(i * bw, yTop, bw * 0.82, bh);
-      // خط توهج عند قمة كل عمود
       if (bh > 4) {
         ctx.fillStyle = `hsla(${hue},100%,90%,${alpha * 0.75})`;
         ctx.fillRect(i * bw, yTop, bw * 0.82, 2);
@@ -878,7 +1004,7 @@ function drawWatermark(ctx, W, H) {
 }
 
 // ══════════════════════════════════════════════════════
-//  AUDIO (معالجة CORS)
+//  AUDIO
 // ══════════════════════════════════════════════════════
 function ensureAudioCtx() {
   if (!S.audioCtx || S.audioCtx.state === "closed") {
@@ -887,7 +1013,6 @@ function ensureAudioCtx() {
     S.analyser = S.audioCtx.createAnalyser();
     S.analyser.fftSize = 512;
     S.analyser.smoothingTimeConstant = .82;
-    // analyser → exportDest فقط (بدون destination لتجنب الصدى)
     S.analyser.connect(S.exportDest);
   }
   return S.audioCtx;
@@ -899,24 +1024,23 @@ async function resumeAudioCtx() {
   return ctx;
 }
 
-// عداد الجيل: كل استدعاء جديد يُبطل الاستدعاءات السابقة الجارية
 let _recGen = 0;
 
 async function playRecitationAudio() {
-  if (S.exporting) return;            // التصدير يدير الصوت بنفسه
+  if (S.exporting) return;
   stopRecitationAudio();
   if (!S.verses.length || !S.playing) return;
   const aya = S.verses[S.currentAya];
   if (!aya) return;
 
-  const myGen = ++_recGen;            // رقم جيل هذا الاستدعاء
+  const myGen = ++_recGen;
   const surahNum = parseInt($("surah-sel").value) || 1;
   const reciter = S.reciters.find(r => r.id === radioVal("reciter")) || S.reciters[0];
   const url = buildAudioUrl(reciter.folder, surahNum, aya.numberInSurah);
   $("audio-status").textContent = `⏳ جاري التحميل — ${reciter.name} الآية ${aya.numberInSurah}`;
 
   const onEnded = () => {
-    if (!S.playing || myGen !== _recGen) return; // تجاهل إذا صدر استدعاء أحدث
+    if (!S.playing || myGen !== _recGen) return;
     if (S.currentAya < S.verses.length - 1) {
       S.currentAya++; S.elapsed = 0; playRecitationAudio(); updateAyaUI();
     } else {
@@ -924,16 +1048,14 @@ async function playRecitationAudio() {
     }
   };
 
-  // ── الطريقة الأساسية: fetch + AudioBuffer ──────────────
-  // نُضيف { cache: 'force-cache' } لتجنب إعادة جلب نفس الملف
   try {
     const ctx = await resumeAudioCtx();
-    if (myGen !== _recGen) return;    // تحقق بعد await
+    if (myGen !== _recGen) return;
 
     const res = await fetch(url, { cache: "force-cache" });
     if (!res.ok) throw new Error("HTTP " + res.status);
     const arrayBuf = await res.arrayBuffer();
-    if (myGen !== _recGen) return;    // تحقق بعد كل await
+    if (myGen !== _recGen) return;
 
     const audioBuf = await ctx.decodeAudioData(arrayBuf);
     if (myGen !== _recGen) return;
@@ -954,24 +1076,23 @@ async function playRecitationAudio() {
     $("audio-status").textContent = `▶️ ${reciter.name} — الآية ${aya.numberInSurah}`;
   } catch (err) {
     if (myGen !== _recGen) return;
-    // ── Fallback: HTMLAudioElement ──────────────────────
     console.warn("AudioBuffer fetch failed, using HTMLAudioElement:", err.message);
     const a = new Audio();
-    a.crossOrigin = null;             // لا نُجبر CORS في الـfallback
+    a.crossOrigin = null;
     a.volume = gv("rec-vol") / 100;
     a.onloadedmetadata = () => {
       if (myGen === _recGen) S.ayaDurations[S.currentAya] = a.duration || 6;
     };
-    a.onended = onEnded;
-    a.onerror = () => {
-      if (myGen !== _recGen) return;
-      S.ayaDurations[S.currentAya] = parseFloat(gv("aya-dur")) || 6;
-      $("audio-status").textContent = `❌ فشل التحميل — ${reciter.name} الآية ${aya.numberInSurah}`;
-    };
-    a.src = url;
-    a.play().catch(() => {});
-    S.recAudioEl = a;
-    $("audio-status").textContent = `▶️ ${reciter.name} — الآية ${aya.numberInSurah}`;
+      a.onended = onEnded;
+      a.onerror = () => {
+        if (myGen !== _recGen) return;
+        S.ayaDurations[S.currentAya] = parseFloat(gv("aya-dur")) || 6;
+        $("audio-status").textContent = `❌ فشل التحميل — ${reciter.name} الآية ${aya.numberInSurah}`;
+      };
+      a.src = url;
+      a.play().catch(() => {});
+      S.recAudioEl = a;
+      $("audio-status").textContent = `▶️ ${reciter.name} — الآية ${aya.numberInSurah}`;
   }
 }
 
@@ -1000,7 +1121,6 @@ function onBgAudio(input) {
   a.loop = ge("bg-loop");
   a.volume = gv("bg-vol") / 100;
   S.bgAudioEl = a;
-  // ربط الصوت المحلي بـ AudioContext للتصدير (لا توجد مشكلة CORS لأنه من نفس المصدر)
   resumeAudioCtx().then(ctx => {
     try {
       const src = ctx.createMediaElementSource(a);
@@ -1071,7 +1191,6 @@ function startPlayer() {
   if (!S.verses.length) { toast("⚠️ لا توجد آيات مُحمَّلة", "error"); return; }
   S.playing = true;
   $("btn-play").textContent = "⏸️";
-  // تنشيط AudioContext إذا كان متوقفاً (لصوت الخلفية)
   resumeAudioCtx().catch(console.warn);
   if (S.bgAudioEl) { S.bgAudioEl.loop = ge("bg-loop"); S.bgAudioEl.play().catch(() => { }); }
   playRecitationAudio();
@@ -1114,15 +1233,15 @@ function updateAyaUI() {
 function fmt(s) { const m = Math.floor(s / 60); return `${m}:${String(Math.floor(s % 60)).padStart(2, "0")}`; }
 
 // ══════════════════════════════════════════════════════
-//  EXPORT — مدة دقيقة عبر جدولة الصوت مسبقاً + تخطي الإطارات
+//  EXPORT
 // ══════════════════════════════════════════════════════
 async function startExport(type) {
   if (!S.verses.length) { toast("⚠️ لا توجد آيات", "error"); return; }
 
   S.exportCancel = false;
   S.exportChunks = [];
-  S.exporting = true;           // ← يوقف checkAyaAdvance وplayRecitationAudio العادي
-  stopRecitationAudio();        // ← أوقف أي صوت عادي جارٍ
+  S.exporting = true;
+  stopRecitationAudio();
   if (S.bgAudioEl) S.bgAudioEl.pause();
 
   $("rec-ov").classList.add("on");
@@ -1130,49 +1249,41 @@ async function startExport(type) {
   $("rec-pct").textContent = "0%";
   $("rec-sub").textContent = "⏳ جاري تحميل الصوتيات…";
 
-  // ── 1. تجهيز AudioContext ──────────────────────────
   const ctx = await resumeAudioCtx();
   const manualDur = parseFloat(gv("aya-dur")) || 6;
-  const getDur  = (i) => (S.ayaDurations[i] && S.ayaDurations[i] > 0.5) ? S.ayaDurations[i] : manualDur;
+  const getDur = (i) => (S.ayaDurations[i] && S.ayaDurations[i] > 0.5) ? S.ayaDurations[i] : manualDur;
 
-  // ── 2. تحميل AudioBuffers لجميع الآيات ────────────
   const surahNum = parseInt($("surah-sel").value) || 1;
-  const reciter  = S.reciters.find(r => r.id === radioVal("reciter")) || S.reciters[0];
-  const gainVal  = gv("rec-vol") / 100;
+  const reciter = S.reciters.find(r => r.id === radioVal("reciter")) || S.reciters[0];
+  const gainVal = gv("rec-vol") / 100;
   let loaded = 0;
 
   const audioBuffers = await Promise.all(S.verses.map(async (aya, i) => {
     const url = buildAudioUrl(reciter.folder, surahNum, aya.numberInSurah);
     try {
-      // محاولة أولى: fetch مع cache للسرعة
       const res = await fetch(url, { cache: "force-cache" });
       if (!res.ok) throw new Error("HTTP " + res.status);
-      const ab  = await res.arrayBuffer();
+      const ab = await res.arrayBuffer();
       const buf = await ctx.decodeAudioData(ab);
       loaded++;
       $("rec-sub").textContent = `⏳ تحميل الصوت… ${loaded}/${S.verses.length}`;
       return buf;
     } catch (e1) {
-      // محاولة ثانية: fetch بدون cache (قد يحل بعض مشاكل CORS)
       try {
         const res2 = await fetch(url, { cache: "no-store", mode: "cors" });
         if (!res2.ok) throw new Error("HTTP " + res2.status);
-        const ab2  = await res2.arrayBuffer();
+        const ab2 = await res2.arrayBuffer();
         const buf2 = await ctx.decodeAudioData(ab2);
         loaded++;
         $("rec-sub").textContent = `⏳ تحميل الصوت… ${loaded}/${S.verses.length}`;
         return buf2;
       } catch (e2) {
-        // محاولة ثالثة: HTMLAudioElement → MediaElementSource
-        // هذه تعمل دائماً حتى بدون CORS لكن لا تُعيد AudioBuffer
-        // نستخدمها فقط للحصول على المدة ونضع null للـ buffer
         try {
           const dur = await new Promise((res, rej) => {
             const a = new Audio();
             a.crossOrigin = "anonymous";
             a.onloadedmetadata = () => res(a.duration);
             a.onerror = () => {
-              // جرب بدون crossOrigin كملاذ أخير
               const a2 = new Audio(url);
               a2.onloadedmetadata = () => res(a2.duration);
               a2.onerror = () => rej(new Error("audio load failed"));
@@ -1191,20 +1302,15 @@ async function startExport(type) {
     }
   }));
 
-  // تحقق: هل نجح تحميل أي buffer؟
   const loadedCount = audioBuffers.filter(b => b !== null).length;
   if (loadedCount === 0) {
-    // جميع الملفات فشلت CORS — استخدم HTMLAudioElement للتصدير
     toast("⚠️ تعذر جلب الصوت عبر fetch — سيتم التصدير بالصوت الأساسي", "info");
-    // استمر بدون صوت مجدول (MediaRecorder يلتقط ما يصله من AudioContext)
   }
 
   if (S.exportCancel) { $("rec-ov").classList.remove("on"); return; }
 
-  // ── 3. تحديث مدد الآيات من الـ AudioBuffers ───────
   audioBuffers.forEach((buf, i) => { if (buf) S.ayaDurations[i] = buf.duration; });
 
-  // بناء جدول دقيق لبداية كل آية
   const ayaStarts = [];
   let acc = 0;
   for (let i = 0; i < S.verses.length; i++) {
@@ -1212,21 +1318,20 @@ async function startExport(type) {
     acc += getDur(i);
   }
   const totalDuration = acc;
-  const FPS           = parseInt(gv("export-fps") || "30") || 30;
-  const FRAME_MS      = 1000 / FPS;
-  const totalFrames   = Math.ceil(totalDuration * FPS);
+  const FPS = parseInt(gv("export-fps") || "30") || 30;
+  const FRAME_MS = 1000 / FPS;
+  const totalFrames = Math.ceil(totalDuration * FPS);
 
-  // ── 4. إعداد MediaRecorder ─────────────────────────
-  const cv      = $("cv");
-  const stream  = cv.captureStream(FPS);
-  const tracks  = [...stream.getTracks()];
+  const cv = $("cv");
+  const stream = cv.captureStream(FPS);
+  const tracks = [...stream.getTracks()];
   if (S.exportDest && S.exportDest.stream.getAudioTracks().length)
     tracks.push(...S.exportDest.stream.getAudioTracks());
 
-  const mime4  = 'video/mp4;codecs="avc1.42E01E,mp4a.40.2"';
+  const mime4 = 'video/mp4;codecs="avc1.42E01E,mp4a.40.2"';
   const mime_w = "video/webm;codecs=vp9,opus";
-  const mimeT  = type === "mp4" ? mime4 : mime_w;
-  const mime   = MediaRecorder.isTypeSupported(mimeT) ? mimeT : "video/webm";
+  const mimeT = type === "mp4" ? mime4 : mime_w;
+  const mime = MediaRecorder.isTypeSupported(mimeT) ? mimeT : "video/webm";
 
   const vbrMbps = parseInt(gv("export-vbr") || "8") || 8;
   const mr = new MediaRecorder(new MediaStream(tracks), {
@@ -1235,7 +1340,7 @@ async function startExport(type) {
   S.mediaRecorder = mr;
   mr.ondataavailable = e => { if (e.data.size > 0) S.exportChunks.push(e.data); };
   mr.onstop = () => {
-    stopExportSources(); // أوقف الصوت فوراً عند الإيقاف (إلغاء أو اكتمال)
+    stopExportSources();
     if (S.exportCancel) { $("rec-ov").classList.remove("on"); return; }
     const blob = new Blob(S.exportChunks, { type: mime });
     const a = document.createElement("a");
@@ -1246,7 +1351,6 @@ async function startExport(type) {
     toast("✅ تم التصدير بنجاح!", "success");
   };
 
-  // ── 5. جدولة الصوت مسبقاً (مستقل عن سرعة الرسم) ─
   mr.start(100);
 
   await new Promise(r => setTimeout(r, 150));
@@ -1258,7 +1362,6 @@ async function startExport(type) {
   const hasBuffers = audioBuffers.some(b => b !== null);
 
   if (hasBuffers) {
-    // ── المسار الأفضل: AudioBuffers مجدولة مسبقاً ──────
     audioBuffers.forEach((buf, i) => {
       if (!buf) return;
       const gain = ctx.createGain();
@@ -1272,9 +1375,6 @@ async function startExport(type) {
       S.exportSources.push({ src, gain });
     });
   } else {
-    // ── المسار البديل: تشغيل تسلسلي بـ HTMLAudioElement ──
-    // يُستخدم عندما تفشل fetch (CORS محدود)
-    // نشغل الآية الأولى الآن، والبقية يُشغَّلن عبر onEnded
     console.warn("Export: using HTMLAudioElement fallback (fetch CORS failed)");
     $("rec-sub").textContent = "⚠️ وضع الصوت البديل (CORS) — الجودة ستنخفض قليلاً";
 
@@ -1284,7 +1384,6 @@ async function startExport(type) {
       const url2 = buildAudioUrl(reciter.folder, surahNum, aya2.numberInSurah);
       const a2 = new Audio(url2);
       a2.volume = gainVal;
-      // توصيل HTMLAudioElement بـ AudioContext للتسجيل
       try {
         const msrc = ctx.createMediaElementSource(a2);
         const gain2 = ctx.createGain();
@@ -1297,22 +1396,12 @@ async function startExport(type) {
       a2.onended = () => playExportAya(idx + 1);
       a2.play().catch(() => {});
     };
-    // ابدأ بعد 50ms لضمان جاهزية MediaRecorder
     setTimeout(() => playExportAya(0), 50);
   }
 
-  // صوت الخلفية (من البداية)
   if (S.bgAudioEl) { S.bgAudioEl.currentTime = 0; S.bgAudioEl.play().catch(() => {}); }
 
-  // ── 6. حلقة الرسم — AudioContext كساعة رئيسية ────────
-  //
-  // المبدأ الذهبي:
-  //   ctx.currentTime يتقدم دائماً (حتى في خلفية التبويب)
-  //   نحسب وقت المشروع = ctx.currentTime - audioStartTime
-  //   ونرسم الإطار المناسب لكل لحظة حقيقية
-  //   MediaRecorder يسجل الوقت الحقيقي تلقائياً → المدة صحيحة دائماً
-  //
-  const savedAya     = S.currentAya;
+  const savedAya = S.currentAya;
   const savedElapsed = S.elapsed;
   const savedPlaying = S.playing;
   S.playing = true;
@@ -1325,53 +1414,44 @@ async function startExport(type) {
     return idx;
   };
 
-  let exportTimer     = null;
-  let lastDrawnFrame  = -1;   // آخر إطار رُسم — نتجنب إعادة رسم نفس الإطار
-  let exportDone      = false;
+  let exportTimer = null;
+  let lastDrawnFrame = -1;
+  let exportDone = false;
 
   const doExportFrame = () => {
     if (S.exportCancel || exportDone) return;
 
-    // ── الوقت الحقيقي للمشروع من ساعة AudioContext ──
     const projectTime = ctx.currentTime - audioStartTime;
 
     if (projectTime >= totalDuration) {
-      // اكتملت الآيات — أوقف الخلفية فوراً
       exportDone = true;
       if (S.bgAudioEl) { S.bgAudioEl.pause(); S.bgAudioEl.currentTime = 0; }
-      // أعطِ 200ms لـ MediaRecorder يفرغ البيانات الأخيرة ثم أوقف
       setTimeout(() => { mr.stop(); restoreExportState(); }, 200);
       return;
     }
 
-    // ── ارسم الإطار المناسب للوقت الحالي ──
     const targetFrame = Math.floor(projectTime * FPS);
 
     if (targetFrame > lastDrawnFrame) {
-      const t  = targetFrame / FPS;
+      const t = targetFrame / FPS;
       const ci = getAyaAt(Math.min(t, totalDuration - 0.001));
       S.currentAya = ci;
-      S.elapsed    = Math.max(0, t - ayaStarts[ci]);
+      S.elapsed = Math.max(0, t - ayaStarts[ci]);
       drawFrame(t);
       lastDrawnFrame = targetFrame;
 
-      // ── تحديث واجهة التقدم ──
       const pct = Math.min(99, Math.round((projectTime / totalDuration) * 100));
       $("rec-fill").style.width = pct + "%";
-      $("rec-pct").textContent  = pct + "%";
-      $("rec-sub").textContent  =
-        `🎬 ${targetFrame}/${totalFrames} — الآية ${ci + 1}/${S.verses.length} — ${fmt(projectTime)} / ${fmt(totalDuration)}`;
+      $("rec-pct").textContent = pct + "%";
+      $("rec-sub").textContent =
+      `🎬 ${targetFrame}/${totalFrames} — الآية ${ci + 1}/${S.verses.length} — ${fmt(projectTime)} / ${fmt(totalDuration)}`;
       updateAyaUI();
     }
 
-    // ── جدول الدورة القادمة ──
-    // نستخدم setTimeout(fn,1000/FPS) كـ fallback للخلفية
-    // ونضيف rAF عند العودة للتبويب لاستئناف التحديث البصري
     const msToNextFrame = Math.max(4, FRAME_MS - ((projectTime * 1000) % FRAME_MS));
     exportTimer = setTimeout(doExportFrame, msToNextFrame);
   };
 
-  // استئناف فوري عند العودة للتبويب (visibility change)
   const onVisChange = () => {
     if (!document.hidden && !exportDone && !S.exportCancel) {
       if (exportTimer) { clearTimeout(exportTimer); exportTimer = null; }
@@ -1380,23 +1460,21 @@ async function startExport(type) {
   };
   document.addEventListener("visibilitychange", onVisChange);
 
-  // ابدأ
   exportTimer = setTimeout(doExportFrame, 0);
 
   function restoreExportState() {
     exportDone = true;
     if (exportTimer !== null) { clearTimeout(exportTimer); exportTimer = null; }
     document.removeEventListener("visibilitychange", onVisChange);
-    S.exporting    = false;
-    S.playing      = savedPlaying;
-    S.currentAya   = savedAya;
-    S.elapsed      = savedElapsed;
+    S.exporting = false;
+    S.playing = savedPlaying;
+    S.currentAya = savedAya;
+    S.elapsed = savedElapsed;
     $("rec-ov").classList.remove("on");
     updateAyaUI();
   }
 }
 
-// ── دالة مساعدة لإيقاف جميع مصادر صوت التصدير فوراً ──
 function stopExportSources() {
   S.exportSources.forEach(s => {
     try { s.src.onended = null; s.src.stop(0); } catch (_) {}
@@ -1407,12 +1485,10 @@ function stopExportSources() {
 
 function cancelExport() {
   S.exportCancel = true;
-  S.exporting    = false;
-  // أوقف الصوت المجدول فوراً
+  S.exporting = false;
   stopExportSources();
   stopRecitationAudio();
   if (S.bgAudioEl) { S.bgAudioEl.pause(); S.bgAudioEl.currentTime = 0; }
-  // أوقف MediaRecorder — سيستدعي onstop تلقائياً
   if (S.mediaRecorder && S.mediaRecorder.state !== "inactive") {
     try { S.mediaRecorder.stop(); } catch (_) {}
   }
@@ -1435,12 +1511,33 @@ async function loadSurahList() {
       sessionStorage.setItem("gt_surahs", JSON.stringify(surahs));
     }
     S.surahs = surahs;
-    sel.innerHTML = surahs.map(s => `<option value="${s.number}">${s.number}. ${s.name} — ${s.englishName}</option>`).join("");
+    S.filteredSurahs = surahs;
+    renderSurahList(surahs);
     await loadVerses();
   } catch (e) {
     sel.innerHTML = `<option value="1">1. سورة الفاتحة</option>`;
     loadOfflineFallback();
   }
+}
+
+function renderSurahList(surahs) {
+  const sel = $("surah-sel");
+  sel.innerHTML = surahs.map(s => `<option value="${s.number}">${s.number}. ${s.name} — ${s.englishName}</option>`).join("");
+}
+
+function filterSurahs(query) {
+  if (!S.surahs) return;
+  const q = query.trim().toLowerCase();
+  if (!q) {
+    S.filteredSurahs = S.surahs;
+  } else {
+    S.filteredSurahs = S.surahs.filter(s =>
+    s.name.includes(q) ||
+    s.englishName.toLowerCase().includes(q) ||
+    s.number.toString().includes(q)
+    );
+  }
+  renderSurahList(S.filteredSurahs);
 }
 
 function loadOfflineFallback() {
@@ -1507,7 +1604,7 @@ async function loadTranslations() {
 }
 
 // ══════════════════════════════════════════════════════
-//  FONTS (مع إصلاح المسافات باستخدام encodeURI)
+//  FONTS
 // ══════════════════════════════════════════════════════
 function renderFontGrid() {
   const grid = $("font-grid"); grid.innerHTML = "";
@@ -1530,10 +1627,8 @@ async function loadLocalFonts(showToast = false) {
       if (!item.name || !item.file) continue;
       if (S.allFonts.find(x => x.name === item.name)) continue;
       try {
-        // نُرمِّز مرة واحدة بعد فك أي ترميز سابق لتجنب %2520
         let rawFile = item.file;
         try { rawFile = decodeURIComponent(rawFile); } catch(_) {}
-        // encodeURIComponent يُرمّز المسافات كـ %20 — صحيح لمكونات URL
         const fontUrl = `./fonts/${rawFile.split('/').map(encodeURIComponent).join('/')}`;
         const face = new FontFace(item.name, `url(${fontUrl})`);
         await face.load();
@@ -1577,7 +1672,7 @@ function loadCustomFonts(input) {
 }
 
 // ══════════════════════════════════════════════════════
-//  RECITERS (جميع القراء قابلة للتعديل والحذف)
+//  RECITERS
 // ══════════════════════════════════════════════════════
 function renderReciters() {
   const grid = $("reciters-grid");
@@ -1586,12 +1681,12 @@ function renderReciters() {
     const div = document.createElement("div");
     div.className = "rctr-card";
     div.innerHTML = `
-      <input type="radio" name="reciter" id="rc${i}" value="${r.id}" ${i === 0 ? "checked" : ""}>
-      <label for="rc${i}">
-        <span class="rf">${r.flag}</span>${r.name}
-        <span class="edit-reciter" data-id="${r.id}" data-name="${r.name}" data-flag="${r.flag}" data-folder="${r.folder}">✏️</span>
-        <span class="del-reciter" data-id="${r.id}">🗑️</span>
-      </label>
+    <input type="radio" name="reciter" id="rc${i}" value="${r.id}" ${i === 0 ? "checked" : ""}>
+    <label for="rc${i}">
+    <span class="rf">${r.flag}</span>${r.name}
+    <span class="edit-reciter" data-id="${r.id}" data-name="${r.name}" data-flag="${r.flag}" data-folder="${r.folder}">✏️</span>
+    <span class="del-reciter" data-id="${r.id}">🗑️</span>
+    </label>
     `;
     grid.appendChild(div);
   });
@@ -1616,6 +1711,7 @@ function deleteReciter(id) {
   }
   S.reciters = S.reciters.filter(r => r.id !== id);
   renderReciters();
+  saveReciters();
   toast("🗑️ تم حذف القارئ", "info");
 }
 
@@ -1645,6 +1741,7 @@ function addCustomReciter() {
     toast(`✅ تمت إضافة: ${name}`, "success");
   }
   renderReciters();
+  saveReciters();
   $("add-reciter-form").classList.remove("on");
   $("ar-name").value = ""; $("ar-folder").value = "";
 }
@@ -1748,7 +1845,6 @@ function initTabs() {
   document.querySelectorAll(".tab-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       goTab(btn.dataset.tab);
-      // على المحمول: افتح الـpanel عند النقر على تبويب
       if (window.innerWidth <= 760) openMobilePanel();
     });
   });
@@ -1828,11 +1924,10 @@ function closeMobilePanel() {
   if (t) { t.textContent = "🛠 الأدوات"; t.classList.remove("active"); }
 }
 
-// ── سحب لإغلاق الـ Panel ──────────────────────────
 function initPanelSwipe(e) {
   const startY = e.touches[0].clientY;
-  const panel  = $("panel");
-  let   diff   = 0;
+  const panel = $("panel");
+  let diff = 0;
   const onMove = ev => {
     diff = ev.touches[0].clientY - startY;
     if (diff > 0) panel.style.transform = `translateY(${diff}px)`;
@@ -1841,13 +1936,15 @@ function initPanelSwipe(e) {
     panel.style.transform = "";
     if (diff > 70) closeMobilePanel();
     document.removeEventListener("touchmove", onMove);
-    document.removeEventListener("touchend",  onEnd);
+    document.removeEventListener("touchend", onEnd);
   };
   document.addEventListener("touchmove", onMove, { passive: true });
-  document.addEventListener("touchend",  onEnd);
+  document.addEventListener("touchend", onEnd);
 }
 
-// ── SETTINGS FUNCTIONS ───────────────────────────────
+// ══════════════════════════════════════════════════════
+//  SETTINGS FUNCTIONS
+// ══════════════════════════════════════════════════════
 function resetAllSettings() {
   if (!confirm("⚠️ سيتم إعادة جميع الإعدادات للافتراضي — هل تريد المتابعة؟")) return;
   localStorage.clear();
@@ -1875,9 +1972,8 @@ function checkOffline() {
   const u = () => document.body.classList.toggle("offline", !navigator.onLine);
   window.addEventListener("online", u); window.addEventListener("offline", u); u();
 }
-
-function toast(msg, type = "info") {
+function toast(msg, type = "info", duration = 3600) {
   const el = document.createElement("div"); el.className = `toast ${type}`; el.textContent = msg;
   $("toast-c").appendChild(el);
-  setTimeout(() => el.remove(), 3600);
+  setTimeout(() => el.remove(), duration);
 }
