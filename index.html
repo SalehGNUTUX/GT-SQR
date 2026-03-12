@@ -3,32 +3,22 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
-<meta name="description" content="GT-SQR — GnuTux Short Quran Reels — صانع مقاطع القرآن الكريم الاحترافي">
-<meta name="application-name" content="GT-SQR">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="GT-SQR">
-<meta name="msapplication-TileColor" content="#0a2e1e">
-<meta name="msapplication-TileImage" content="gt-sqr-icons/192x192/gt-sqr-icon.png">
-<meta name="theme-color" content="#0a2e1e">
+<meta name="description" content="GT-SQR — GnuTux Short Quran Reels">
+<meta name="theme-color" content="#040c08">
 <title>GT-SQR — صانع ريلز القرآن الكريم</title>
-<link rel="manifest" href="manifest.json" crossorigin="use-credentials">
-<!-- favicon وأيقونات PWA -->
-<link rel="icon" type="image/png" sizes="16x16"  href="gt-sqr-icons/16x16/gt-sqr-icon.png">
-<link rel="icon" type="image/png" sizes="32x32"  href="gt-sqr-icons/32x32/gt-sqr-icon.png">
-<link rel="icon" type="image/png" sizes="192x192" href="gt-sqr-icons/192x192/gt-sqr-icon.png">
-<link rel="icon" type="image/png" sizes="512x512" href="gt-sqr-icons/512x512/gt-sqr-icon.png">
-<link rel="shortcut icon" href="gt-sqr-icons/32x32/gt-sqr-icon.png">
-<!-- Apple Touch Icons -->
-<link rel="apple-touch-icon" href="gt-sqr-icons/192x192/gt-sqr-icon.png">
-<link rel="apple-touch-icon" sizes="152x152" href="gt-sqr-icons/192x192/gt-sqr-icon.png">
-<link rel="apple-touch-icon" sizes="167x167" href="gt-sqr-icons/192x192/gt-sqr-icon.png">
-<link rel="apple-touch-icon" sizes="180x180" href="gt-sqr-icons/192x192/gt-sqr-icon.png">
+<link rel="manifest" href="manifest.json">
+<!-- أيقونات PWA و favicon -->
+<link rel="icon" type="image/png" sizes="16x16" href="GT-SQR-icons/favicon/favicon-16x16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="GT-SQR-icons/favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="GT-SQR-icons/favicon/favicon-48x48.png">
+<link rel="icon" type="image/png" sizes="192x192" href="GT-SQR-icons/all/192x192/gt-sqr-icon.png">
+<link rel="shortcut icon" href="GT-SQR-icons/gt-sqr-icon.ico">
+<link rel="apple-touch-icon" sizes="192x192" href="GT-SQR-icons/all/192x192/gt-sqr-icon.png">
+<link rel="apple-touch-icon" sizes="512x512" href="GT-SQR-icons/all/512x512/gt-sqr-icon.png">
 <!-- خطوط جوجل -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link id="gfonts" href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Reem+Kufi:wght@400;700&family=Scheherazade+New:wght@400;700&family=Cairo:wght@300;400;600;700;900&family=Noto+Naskh+Arabic:wght@400;700&family=Lateef:wght@400;700&family=Harmattan:wght@400;700&family=Markazi+Text:ital,wght@0,400;0,700&family=Aref+Ruqaa&display=swap" rel="stylesheet">
+<link id="gfonts" href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Reem+Kufi:wght@400;700&family=Scheherazade+New:wght@400;700&family=Cairo:wght@300;400;600;700;900&family=Noto+Naskh+Arabic:wght@400;700&family=Lateef:wght@400;700&family=Harmattan:wght@400;700&family=Markazi+Text:ital,wght@0,400;0,700;1,400&family=Aref+Ruqaa&display=swap" rel="stylesheet">
 <style>
 :root{
   --p:#0a5c36;--pl:#1a8a52;--pd:#063d24;
@@ -49,20 +39,11 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--fu);direction:rtl;d
 ::-webkit-scrollbar-track{background:var(--bg1)}
 ::-webkit-scrollbar-thumb{background:var(--p);border-radius:6px}
 
-/* PWA INSTALL BAR */
-#pwa-bar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:500;background:linear-gradient(135deg,var(--bg3),#0d2a18);border-top:2px solid var(--pl);padding:10px 16px;align-items:center;gap:10px;box-shadow:0 -4px 24px rgba(0,0,0,.6);animation:slideUp .35s cubic-bezier(.32,.72,0,1)}
-@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
-#pwa-bar .pwa-icon{width:40px;height:40px;border-radius:9px;flex-shrink:0}
-#pwa-bar .pwa-txt{flex:1;min-width:0}
-#pwa-bar .pwa-txt strong{display:block;font-size:12px;color:var(--al);font-weight:900}
-#pwa-bar .pwa-txt small{font-size:10px;color:var(--t2)}
-#pwa-bar .pwa-btns{display:flex;gap:6px;flex-shrink:0}
-
 /* HEADER */
 #hdr{height:70px;flex-shrink:0;background:linear-gradient(90deg,#0c1a0e,var(--bg1));border-bottom:1px solid var(--b1);padding:0 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 16px rgba(0,0,0,.4);z-index:100}
 .logo{display:flex;align-items:center;gap:9px}
 .logo-icon{width:70px;height:70px;border-radius:11px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--pd),var(--p),var(--a));cursor:pointer;flex-shrink:0;box-shadow:0 2px 14px rgba(201,162,39,.4);transition:transform .35s cubic-bezier(.34,1.56,.64,1),box-shadow .3s,filter .3s}
-.logo-icon img{width:175%;height:175%;object-fit:contain;display:block;border-radius:9px}
+.logo-icon img{width:100%;height:100%;object-fit:contain;display:block;border-radius:9px}
 .logo-icon .fi{font-size:28px;display:none}
 .logo-icon:hover{transform:rotate(12deg) scale(1.18);box-shadow:0 4px 20px rgba(201,162,39,.7);filter:brightness(1.15)}
 .logo-icon:active{transform:rotate(-8deg) scale(.88);transition:transform .1s}
@@ -119,7 +100,6 @@ body{background:var(--bg0);color:var(--t1);font-family:var(--fu);direction:rtl;d
 .sv{min-width:30px;text-align:center;font-size:9.5px;color:var(--al);font-weight:700}
 .cpg{display:flex;align-items:center;gap:5px;direction:ltr}
 .cpg input[type=color]{width:27px;height:27px;border:1.5px solid var(--b1);border-radius:5px;cursor:pointer;background:none;padding:1px;flex-shrink:0;order:-1}
-/* في اللوحة اليمينية، نعكس ترتيب منتقي اللون ليفتح نحو اليسار */
 #panel .cpg{flex-direction:row-reverse;direction:rtl}
 #panel .cpg input[type=color]{order:0}
 
@@ -247,25 +227,19 @@ body.offline .offline-badge{display:block}
 #bg-img-thumb img{width:100%;border-radius:5px;max-height:60px;object-fit:cover}
 #bg-vid-thumb{display:none;margin-top:6px}
 #bg-vid-thumb video{width:100%;border-radius:5px;max-height:60px;object-fit:cover}
-/* معاينة الشعار */
 #logo-preview{display:none;margin-top:6px;text-align:center}
 #logo-img-preview{max-width:100%;max-height:50px;border-radius:4px}
 
-/* ══ MOBILE LAYOUT ══════════════════════════════════ */
+/* MOBILE LAYOUT */
 #mob-toggle{display:none;min-width:36px;height:36px;padding:0 10px;border:1px solid var(--b1);border-radius:var(--r);background:var(--bg3);color:var(--t1);font-size:13px;font-weight:700;font-family:var(--fu);cursor:pointer;align-items:center;justify-content:center;gap:4px;flex-shrink:0;transition:var(--tr);white-space:nowrap}
 #mob-toggle:hover{border-color:var(--pl);color:var(--al)}
 #mob-toggle.active{background:rgba(10,92,54,.3);border-color:var(--pl);color:var(--al)}
-
-/* شريط التخطيط — يظهر فقط على الموبايل */
 #mob-layout-bar{display:none;background:var(--bg1);border-bottom:1px solid var(--b1);padding:3px 10px;gap:5px;align-items:center;flex-shrink:0;z-index:150;height:34px}
 .mob-lay-btn{flex:1;height:26px;border:1px solid var(--b1);border-radius:var(--r);background:var(--bg3);color:var(--t2);font-size:9px;font-weight:700;cursor:pointer;font-family:var(--fu);transition:var(--tr);text-align:center;white-space:nowrap}
 .mob-lay-btn.on{background:rgba(10,92,54,.35);border-color:var(--pl);color:var(--al)}
-
-/* شريط حجم اللوحة (يظهر فقط عند فتح اللوحة على موبايل) */
 #mob-size-bar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:201;background:var(--bg1);border-top:1px solid var(--b2);padding:3px 12px;align-items:center;gap:8px}
 #mob-size-bar input[type=range]{flex:1;accent-color:var(--p)}
 #mob-size-bar span{font-size:9px;color:var(--t3);white-space:nowrap;min-width:30px;text-align:center}
-
 #mob-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:190;backdrop-filter:blur(2px)}
 #mob-backdrop.on{display:block}
 
@@ -275,49 +249,17 @@ body.offline .offline-badge{display:block}
   #mob-layout-bar{display:flex}
   .logo-text small{display:none}
   .ex-info{display:none}
-
-  /* ── Preview يأخذ الشاشة كاملة دائماً ── */
   #app{grid-template-columns:1fr;position:relative;overflow:hidden}
-  #preview{
-    position:absolute;inset:0;padding:6px;
-    display:flex;flex-direction:column;
-    align-items:center;justify-content:center;
-  }
-
-  /* ── Panel = Bottom Sheet (الوضع الافتراضي) ── */
-  #panel{
-    position:fixed;left:0;right:0;bottom:0;
-    height:var(--panel-h, 62vh);
-    z-index:200;
-    border-top:2px solid var(--pl);border-left:none;
-    border-radius:16px 16px 0 0;
-    transform:translateY(100%);
-    transition:transform .3s cubic-bezier(.32,.72,0,1),height .2s;
-    box-shadow:0 -8px 32px rgba(0,0,0,.7);
-    overflow:hidden;
-  }
+  #preview{position:absolute;inset:0;padding:6px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  #panel{position:fixed;left:0;right:0;bottom:0;height:var(--panel-h, 62vh);z-index:200;border-top:2px solid var(--pl);border-left:none;border-radius:16px 16px 0 0;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1),height .2s;box-shadow:0 -8px 32px rgba(0,0,0,.7);overflow:hidden}
   #panel.mob-open{transform:translateY(0)}
-
-  /* شريط حجم اللوحة نشط */
   #panel.mob-open ~ #mob-size-bar{display:flex}
-
-  /* ── وضع أفقي: Panel من اليمين ── */
-  body.mob-horiz #panel{
-    position:fixed;top:0;bottom:0;right:0;left:auto;
-    width:var(--panel-w, 52vw);height:auto;
-    border-top:none;border-left:2px solid var(--pl);
-    border-radius:0;
-    transform:translateX(100%);
-    transition:transform .3s cubic-bezier(.32,.72,0,1),width .2s;
-  }
+  body.mob-horiz #panel{position:fixed;top:0;bottom:0;right:0;left:auto;width:var(--panel-w, 52vw);height:auto;border-top:none;border-left:2px solid var(--pl);border-radius:0;transform:translateX(100%);transition:transform .3s cubic-bezier(.32,.72,0,1),width .2s}
   body.mob-horiz #panel.mob-open{transform:translateX(0)}
   body.mob-horiz #panel ~ #mob-size-bar{display:flex}
   body.mob-horiz #panel ~ #mob-size-bar input{accent-color:var(--p)}
-
-  /* مقبض السحب */
   #panel-handle{display:flex}
   body.mob-horiz #panel-handle{display:none}
-
   .cw{max-width:calc(100vw - 12px);max-height:calc(100vh - 130px)}
   #cv{max-width:100%;max-height:100%}
   #exbar{padding:0 8px}
@@ -333,7 +275,6 @@ body.offline .offline-badge{display:block}
   .btn-a span,.btn-p span{display:none}
   .tabs .tab-btn span:not(.ti){display:none}
 }
-/* Touch swipe handle */
 #panel-handle{display:none;height:22px;flex-shrink:0;cursor:grab;align-items:center;justify-content:center}
 #panel-handle::after{content:'';display:block;width:38px;height:4px;background:var(--b2);border-radius:2px}
 @media(max-width:760px){#panel-handle{display:flex}}
@@ -342,10 +283,10 @@ body.offline .offline-badge{display:block}
 <body>
 
 <div class="offline-badge">📵 غير متصل</div>
-<div id="mob-backdrop" onclick="closeMobilePanel()"></div>
+<div id="mob-backdrop"></div>
 <div id="mob-size-bar">
   <span style="font-size:10px">📐</span>
-  <input type="range" id="panel-size-slider" min="30" max="90" value="62" oninput="onPanelSizeChange(this.value)">
+  <input type="range" id="panel-size-slider" min="30" max="90" value="62">
   <span id="panel-size-lbl">62٪</span>
 </div>
 <div id="toast-c"></div>
@@ -355,7 +296,7 @@ body.offline .offline-badge{display:block}
   <div class="rec-sub" id="rec-sub">يرجى الانتظار</div>
   <div class="rec-bar"><div class="rec-fill" id="rec-fill"></div></div>
   <div class="rec-sub" id="rec-pct">0%</div>
-  <button class="btn btn-d bsm" onclick="cancelExport()">✕ إلغاء</button>
+  <button class="btn btn-d bsm" id="cancel-export-btn">✕ إلغاء</button>
 </div>
 
 <div class="modal-bg" id="tpl-modal">
@@ -363,8 +304,8 @@ body.offline .offline-badge{display:block}
     <h3>💾 حفظ القالب</h3>
     <div class="fg"><label class="fl">اسم القالب</label><input type="text" class="fc" id="tpl-name-inp" placeholder="مثال: ريلز رمضان الذهبي"></div>
     <div class="modal-btns">
-      <button class="btn btn-g" onclick="closeModal('tpl-modal')">إلغاء</button>
-      <button class="btn btn-a" onclick="confirmSaveTemplate()">💾 حفظ</button>
+      <button class="btn btn-g" id="close-tpl-modal-btn">إلغاء</button>
+      <button class="btn btn-a" id="confirm-save-template-btn">💾 حفظ</button>
     </div>
   </div>
 </div>
@@ -372,7 +313,7 @@ body.offline .offline-badge{display:block}
 <header id="hdr">
   <div class="logo">
     <div class="logo-icon" id="logo-icon">
-      <img src="gt-sqr-icons/512x512/gt-sqr-icon.png" alt="GT-SQR" onerror="this.style.display='none';document.querySelector('.logo-icon .fi').style.display='block'">
+      <img src="GT-SQR-icons/all/512x512/gt-sqr-icon.png" alt="GT-SQR" onerror="this.style.display='none';document.querySelector('.logo-icon .fi').style.display='block'">
       <span class="fi">📿</span>
     </div>
     <div class="logo-text">
@@ -381,24 +322,23 @@ body.offline .offline-badge{display:block}
     </div>
   </div>
   <div class="hdr-r">
-    <button class="btn btn-g bsm" onclick="openModal('tpl-modal')">💾 <span>حفظ</span></button>
-    <button class="btn btn-g bsm" onclick="goTab('tpl')">📂 <span>القوالب</span></button>
-    <button id="mob-toggle" onclick="toggleMobilePanel()" title="الأدوات">🛠 الأدوات</button>
+    <button class="btn btn-g bsm" id="open-tpl-modal-btn">💾 <span>حفظ</span></button>
+    <button class="btn btn-g bsm" id="go-tpl-tab-btn">📂 <span>القوالب</span></button>
+    <button id="mob-toggle" title="الأدوات">🛠 الأدوات</button>
   </div>
 </header>
 
-<!-- شريط اختيار تخطيط الموبايل -->
 <div id="mob-layout-bar">
   <span style="font-size:9px;color:var(--t3);white-space:nowrap">📱 عرض:</span>
-  <button class="mob-lay-btn on" id="lay-vert" onclick="setMobLayout('vert')">⬆ عمودي</button>
-  <button class="mob-lay-btn" id="lay-horiz" onclick="setMobLayout('horiz')">⬅ أفقي</button>
-  <button class="mob-lay-btn" id="lay-full" onclick="setMobLayout('full')" style="max-width:70px">⛶ كامل</button>
+  <button class="mob-lay-btn on" id="lay-vert">⬆ عمودي</button>
+  <button class="mob-lay-btn" id="lay-horiz">⬅ أفقي</button>
+  <button class="mob-lay-btn" id="lay-full" style="max-width:70px">⛶ كامل</button>
 </div>
 
 <div id="app">
 
   <div id="panel">
-    <div id="panel-handle" ontouchstart="initPanelSwipe(event)"></div>
+    <div id="panel-handle"></div>
     <div class="tabs">
       <button class="tab-btn on" data-tab="rec"><span class="ti">📖</span><span>التلاوة</span></button>
       <button class="tab-btn" data-tab="scene"><span class="ti">🎬</span><span>المشهد</span></button>
@@ -416,19 +356,22 @@ body.offline .offline-badge{display:block}
       <div class="tp on" id="tab-rec">
         <div class="sec">
           <div class="sec-t">📖 السورة والآيات</div>
-          <div class="fg"><label class="fl">السورة الكريمة</label><select class="fc" id="surah-sel" onchange="onSurahChange()"></select></div>
+          <div class="fg" style="margin-bottom:5px">
+            <input type="text" class="fc" id="surah-search" placeholder="🔍 ابحث عن سورة... (بالعربية أو الإنجليزية)">
+          </div>
+          <div class="fg"><label class="fl">السورة الكريمة</label><select class="fc" id="surah-sel"></select></div>
           <div class="grid2">
             <div class="fg"><label class="fl">من الآية</label><input type="number" class="fc" id="from-aya" min="1" value="1"></div>
             <div class="fg"><label class="fl">إلى الآية</label><input type="number" class="fc" id="to-aya" min="1" value="7"></div>
           </div>
           <div id="aya-info" style="font-size:9px;color:var(--t3);margin-bottom:5px"></div>
-          <button class="btn btn-p bsm bfw" onclick="loadVerses()">🔄 تحميل الآيات</button>
+          <button class="btn btn-p bsm bfw" id="load-verses-btn">🔄 تحميل الآيات</button>
         </div>
 
         <div class="sec">
           <div class="sec-t">🎤 القارئ</div>
           <div class="rctr-grid" id="reciters-grid"></div>
-          <div style="margin-top:7px"><button class="btn btn-g bsm bfw" onclick="toggleAddReciter()">➕ إضافة قارئ آخر</button></div>
+          <div style="margin-top:7px"><button class="btn btn-g bsm bfw" id="toggle-add-reciter-btn">➕ إضافة قارئ آخر</button></div>
           <div class="add-reciter-form" id="add-reciter-form">
             <div class="ar-grid">
               <div class="fg"><label class="fl">الاسم</label><input type="text" class="fc" id="ar-name" placeholder="اسم القارئ"></div>
@@ -465,27 +408,27 @@ body.offline .offline-badge{display:block}
             </div>
             <div class="fg"><label class="fl">مجلد EveryAyah — <a href="https://everyayah.com/data/" target="_blank" style="color:var(--info);font-size:8px">قائمة المجلدات ↗</a></label><input type="text" class="fc" id="ar-folder" placeholder="Alafasy_128kbps"></div>
             <span class="note">📁 أدخل اسم المجلد فقط (مثل Alafasy_128kbps) وليس الرابط الكامل</span>
-            <button class="btn btn-p bsm bfw" onclick="addCustomReciter()">✅ إضافة / تحديث</button>
+            <button class="btn btn-p bsm bfw" id="add-custom-reciter-btn">✅ إضافة / تحديث</button>
           </div>
         </div>
 
         <div class="sec">
           <div class="sec-t">📐 مقاس الفيديو</div>
           <div class="rg">
-            <div class="rc"><input type="radio" name="fmt" id="f1" value="9:16" checked onchange="onFmtChange()"><label for="f1"><span class="ri">📱</span><span>ريلز 9:16</span></label></div>
-            <div class="rc"><input type="radio" name="fmt" id="f2" value="16:9" onchange="onFmtChange()"><label for="f2"><span class="ri">💻</span><span>يوتيوب 16:9</span></label></div>
-            <div class="rc"><input type="radio" name="fmt" id="f3" value="1:1" onchange="onFmtChange()"><label for="f3"><span class="ri">🟦</span><span>مربع 1:1</span></label></div>
+            <div class="rc"><input type="radio" name="fmt" id="f1" value="9:16" checked><label for="f1"><span class="ri">📱</span><span>ريلز 9:16</span></label></div>
+            <div class="rc"><input type="radio" name="fmt" id="f2" value="16:9"><label for="f2"><span class="ri">💻</span><span>يوتيوب 16:9</span></label></div>
+            <div class="rc"><input type="radio" name="fmt" id="f3" value="1:1"><label for="f3"><span class="ri">🟦</span><span>مربع 1:1</span></label></div>
           </div>
         </div>
 
         <div class="sec">
           <div class="sec-t">⏱️ التوقيت</div>
-          <div class="tgg"><span class="tgl">مدة تلقائية حسب الصوت</span><label class="tg"><input type="checkbox" id="auto-dur" checked onchange="toggleManualDur()"><span class="tgs"></span></label></div>
+          <div class="tgg"><span class="tgl">مدة تلقائية حسب الصوت</span><label class="tg"><input type="checkbox" id="auto-dur" checked><span class="tgs"></span></label></div>
           <div id="manual-dur" style="display:none;padding-top:5px">
             <label class="fl">مدة كل آية (ثانية)</label>
-            <div class="sg"><input type="range" min="2" max="25" step=".5" value="6" id="aya-dur" oninput="sv(this,'aya-dur-v','s')"><span class="sv" id="aya-dur-v">6s</span></div>
+            <div class="sg"><input type="range" min="2" max="25" step=".5" value="6" id="aya-dur"><span class="sv" id="aya-dur-v">6s</span></div>
           </div>
-          <div class="fg" style="margin-top:6px"><label class="fl">مدة الانتقال</label><div class="sg"><input type="range" min="0" max="3" step=".1" value=".5" id="trans-dur" oninput="sv(this,'trans-dur-v','s')"><span class="sv" id="trans-dur-v">.5s</span></div></div>
+          <div class="fg" style="margin-top:6px"><label class="fl">مدة الانتقال</label><div class="sg"><input type="range" min="0" max="3" step=".1" value=".5" id="trans-dur"><span class="sv" id="trans-dur-v">.5s</span></div></div>
         </div>
       </div>
 
@@ -498,23 +441,23 @@ body.offline .offline-badge{display:block}
         <div class="sec">
           <div class="sec-t">🖼️ نوع الخلفية</div>
           <div class="rg">
-            <div class="rc"><input type="radio" name="bgt" id="bgt1" value="gradient" checked onchange="onBgTypeChange()"><label for="bgt1"><span class="ri">🎨</span><span>تدرج</span></label></div>
-            <div class="rc"><input type="radio" name="bgt" id="bgt2" value="image" onchange="onBgTypeChange()"><label for="bgt2"><span class="ri">🖼️</span><span>صورة</span></label></div>
-            <div class="rc"><input type="radio" name="bgt" id="bgt3" value="video" onchange="onBgTypeChange()"><label for="bgt3"><span class="ri">🎥</span><span>فيديو</span></label></div>
+            <div class="rc"><input type="radio" name="bgt" id="bgt1" value="gradient" checked><label for="bgt1"><span class="ri">🎨</span><span>تدرج</span></label></div>
+            <div class="rc"><input type="radio" name="bgt" id="bgt2" value="image"><label for="bgt2"><span class="ri">🖼️</span><span>صورة</span></label></div>
+            <div class="rc"><input type="radio" name="bgt" id="bgt3" value="video"><label for="bgt3"><span class="ri">🎥</span><span>فيديو</span></label></div>
           </div>
           <div id="bg-grad-ctrl" style="margin-top:8px">
             <div class="grid2">
-              <div class="fg"><label class="fl">اللون 1</label><div class="cpg"><input type="color" id="gc1" value="#0a2e1e" oninput="syncCP('gc1','gc1t')"><input type="text" class="fc" id="gc1t" value="#0a2e1e" style="flex:1" oninput="syncCT('gc1','gc1t')"></div></div>
-              <div class="fg"><label class="fl">اللون 2</label><div class="cpg"><input type="color" id="gc2" value="#020d06" oninput="syncCP('gc2','gc2t')"><input type="text" class="fc" id="gc2t" value="#020d06" style="flex:1" oninput="syncCT('gc2','gc2t')"></div></div>
+              <div class="fg"><label class="fl">اللون 1</label><div class="cpg"><input type="color" id="gc1" value="#0a2e1e"><input type="text" class="fc" id="gc1t" value="#0a2e1e" style="flex:1"></div></div>
+              <div class="fg"><label class="fl">اللون 2</label><div class="cpg"><input type="color" id="gc2" value="#020d06"><input type="text" class="fc" id="gc2t" value="#020d06" style="flex:1"></div></div>
             </div>
             <div class="fg"><label class="fl">الاتجاه</label><select class="fc" id="grad-dir"><option value="tb">⬇️ أعلى→أسفل</option><option value="bt">⬆️ أسفل→أعلى</option><option value="diag">↘️ قطري</option><option value="rdiag">↙️ قطري معكوس</option><option value="radial">⭕ دائري</option></select></div>
           </div>
           <div id="bg-img-ctrl" style="display:none;margin-top:8px">
-            <div class="fu-area"><input type="file" accept="image/*" onchange="onBgMedia(this,'image')"><div class="fu-icon">🖼️</div><div class="fu-txt">صورة الخلفية<br><small>JPG · PNG · WebP · GIF · BMP · AVIF</small></div></div>
+            <div class="fu-area"><input type="file" accept="image/*" id="bg-img-input"><div class="fu-icon">🖼️</div><div class="fu-txt">صورة الخلفية<br><small>JPG · PNG · WebP · GIF · BMP · AVIF</small></div></div>
             <div id="bg-img-thumb"><img id="bg-img-preview" alt=""></div>
           </div>
           <div id="bg-vid-ctrl" style="display:none;margin-top:8px">
-            <div class="fu-area"><input type="file" accept="video/*" onchange="onBgMedia(this,'video')"><div class="fu-icon">🎥</div><div class="fu-txt">فيديو الخلفية<br><small>MP4 · WebM · MOV · OGG</small></div></div>
+            <div class="fu-area"><input type="file" accept="video/*" id="bg-vid-input"><div class="fu-icon">🎥</div><div class="fu-txt">فيديو الخلفية<br><small>MP4 · WebM · MOV · OGG</small></div></div>
             <div id="bg-vid-thumb"><video id="bg-vid-preview" muted loop playsinline></video></div>
             <div id="bg-vid-info" style="font-size:9px;color:var(--t3);margin-top:3px"></div>
           </div>
@@ -548,15 +491,15 @@ body.offline .offline-badge{display:block}
             <div class="rc"><input type="radio" name="orn" id="or5" value="frame"><label for="or5"><span class="ri">🖼</span><span>إطار</span></label></div>
           </div>
           <div style="margin-top:7px">
-            <div class="fg"><label class="fl">شفافية الزخرفة</label><div class="sg"><input type="range" min="0" max="100" value="20" id="orn-op" oninput="sv(this,'orn-op-v','%')"><span class="sv" id="orn-op-v">20%</span></div></div>
+            <div class="fg"><label class="fl">شفافية الزخرفة</label><div class="sg"><input type="range" min="0" max="100" value="20" id="orn-op"><span class="sv" id="orn-op-v">20%</span></div></div>
             <div class="fg"><label class="fl">لون الزخرفة</label><div class="cpg"><input type="color" id="orn-col" value="#c9a227"></div></div>
           </div>
         </div>
         <div class="sec">
           <div class="sec-t">🔅 الإضاءة</div>
-          <div class="fg"><label class="fl">تعتيم</label><div class="sg"><input type="range" min="0" max="90" value="50" id="dim" oninput="sv(this,'dim-v','%')"><span class="sv" id="dim-v">50%</span></div></div>
-          <div class="fg"><label class="fl">سطوع</label><div class="sg"><input type="range" min="50" max="200" value="100" id="bright" oninput="sv(this,'bright-v','%')"><span class="sv" id="bright-v">100%</span></div></div>
-          <div class="fg"><label class="fl">تشبع</label><div class="sg"><input type="range" min="0" max="200" value="100" id="satur" oninput="sv(this,'satur-v','%')"><span class="sv" id="satur-v">100%</span></div></div>
+          <div class="fg"><label class="fl">تعتيم</label><div class="sg"><input type="range" min="0" max="90" value="50" id="dim"><span class="sv" id="dim-v">50%</span></div></div>
+          <div class="fg"><label class="fl">سطوع</label><div class="sg"><input type="range" min="50" max="200" value="100" id="bright"><span class="sv" id="bright-v">100%</span></div></div>
+          <div class="fg"><label class="fl">تشبع</label><div class="sg"><input type="range" min="0" max="200" value="100" id="satur"><span class="sv" id="satur-v">100%</span></div></div>
         </div>
       </div>
 
@@ -566,10 +509,10 @@ body.offline .offline-badge{display:block}
           <div class="sec-t">🖋️ الخط</div>
           <div style="display:flex;align-items:center;gap:5px;margin-bottom:6px">
             <span style="font-size:9px;color:var(--t3);flex:1">من مجلد <code style="color:var(--al)">fonts/</code></span>
-            <button class="btn btn-g bsm" onclick="loadLocalFonts(true)">🔄 تحديث الخطوط</button>
+            <button class="btn btn-g bsm" id="refresh-fonts-btn">🔄 تحديث الخطوط</button>
           </div>
           <div class="font-grid" id="font-grid"></div>
-          <div class="fu-area"><input type="file" accept=".ttf,.otf,.woff,.woff2" multiple onchange="loadCustomFonts(this)"><div class="fu-icon">➕</div><div class="fu-txt">رفع خط مخصص <span class="badge-new">جديد</span><br><small>TTF · OTF · WOFF · WOFF2</small></div></div>
+          <div class="fu-area"><input type="file" accept=".ttf,.otf,.woff,.woff2" multiple id="custom-fonts-input"><div class="fu-icon">➕</div><div class="fu-txt">رفع خط مخصص <span class="badge-new">جديد</span><br><small>TTF · OTF · WOFF · WOFF2</small></div></div>
         </div>
         <div class="sec">
           <div class="sec-t">🎨 تنسيق النص</div>
@@ -577,8 +520,8 @@ body.offline .offline-badge{display:block}
             <div class="fg"><label class="fl">لون النص</label><div class="cpg"><input type="color" id="txt-col" value="#ffffff"></div></div>
             <div class="fg"><label class="fl">لون الظل</label><div class="cpg"><input type="color" id="shd-col" value="#000000"></div></div>
           </div>
-          <div class="fg"><label class="fl">حجم الخط</label><div class="sg"><input type="range" min="40" max="200" value="100" id="fsize" oninput="sv(this,'fsize-v','%')"><span class="sv" id="fsize-v">100%</span></div></div>
-          <div class="fg"><label class="fl">ارتفاع السطر</label><div class="sg"><input type="range" min="1" max="3" step=".1" value="1.6" id="lh" oninput="sv(this,'lh-v','')"><span class="sv" id="lh-v">1.6</span></div></div>
+          <div class="fg"><label class="fl">حجم الخط</label><div class="sg"><input type="range" min="40" max="200" value="100" id="fsize"><span class="sv" id="fsize-v">100%</span></div></div>
+          <div class="fg"><label class="fl">ارتفاع السطر</label><div class="sg"><input type="range" min="1" max="3" step=".1" value="1.6" id="lh"><span class="sv" id="lh-v">1.6</span></div></div>
           <div class="fg"><label class="fl">موضع النص</label><div class="rg"><div class="rc"><input type="radio" name="tpos" id="tp1" value="top"><label for="tp1"><span class="ri">⬆</span><span>أعلى</span></label></div><div class="rc"><input type="radio" name="tpos" id="tp2" value="center" checked><label for="tp2"><span class="ri">⬛</span><span>وسط</span></label></div><div class="rc"><input type="radio" name="tpos" id="tp3" value="bottom"><label for="tp3"><span class="ri">⬇</span><span>أسفل</span></label></div></div></div>
         </div>
         <div class="sec">
@@ -603,9 +546,9 @@ body.offline .offline-badge{display:block}
         </div>
         <div class="sec">
           <div class="sec-t">🌍 الترجمة والتفسير</div>
-          <div class="fg"><select class="fc" id="trans-sel" onchange="onTransChange()"><option value="none">بدون</option><optgroup label="تفسير عربي"><option value="ar.muyassar">التفسير الميسر</option><option value="ar.jalalayn">تفسير الجلالين</option></optgroup><optgroup label="ترجمات"><option value="en.sahih">English — Sahih International</option><option value="en.pickthall">English — Pickthall</option><option value="fr.hamidullah">Français — Hamidullah</option><option value="ur.ahmedali">اردو — احمد علی</option></optgroup></select></div>
+          <div class="fg"><select class="fc" id="trans-sel"><option value="none">بدون</option><optgroup label="تفسير عربي"><option value="ar.muyassar">التفسير الميسر</option><option value="ar.jalalayn">تفسير الجلالين</option></optgroup><optgroup label="ترجمات"><option value="en.sahih">English — Sahih International</option><option value="en.pickthall">English — Pickthall</option><option value="fr.hamidullah">Français — Hamidullah</option><option value="ur.ahmedali">اردو — احمد علی</option></optgroup></select></div>
           <div id="trans-opts" style="display:none">
-            <div class="fg"><label class="fl">حجم خط الترجمة</label><div class="sg"><input type="range" min="25" max="100" value="55" id="tfs" oninput="sv(this,'tfs-v','%')"><span class="sv" id="tfs-v">55%</span></div></div>
+            <div class="fg"><label class="fl">حجم خط الترجمة</label><div class="sg"><input type="range" min="25" max="100" value="55" id="tfs"><span class="sv" id="tfs-v">55%</span></div></div>
             <div class="fg"><label class="fl">لون الترجمة</label><div class="cpg"><input type="color" id="trans-col" value="#cccccc"></div></div>
           </div>
         </div>
@@ -614,7 +557,7 @@ body.offline .offline-badge{display:block}
           <div class="fg"><input type="text" class="fc" id="wm-text" placeholder="@قناتك"></div>
           <div class="grid2">
             <div class="fg"><label class="fl">الموضع</label><select class="fc" id="wm-pos"><option value="br">أسفل اليمين</option><option value="bl">أسفل اليسار</option><option value="tr">أعلى اليمين</option><option value="tl">أعلى اليسار</option></select></div>
-            <div class="fg"><label class="fl">الحجم</label><div class="sg"><input type="range" min="8" max="30" value="13" id="wm-size" oninput="sv(this,'wm-size-v','px')"><span class="sv" id="wm-size-v">13px</span></div></div>
+            <div class="fg"><label class="fl">الحجم</label><div class="sg"><input type="range" min="8" max="30" value="13" id="wm-size"><span class="sv" id="wm-size-v">13px</span></div></div>
           </div>
           <div class="fg"><label class="fl">اللون</label><div class="cpg"><input type="color" id="wm-col" value="#ffffff"></div></div>
         </div>
@@ -625,20 +568,19 @@ body.offline .offline-badge{display:block}
         <div class="sec">
           <div class="sec-t">🎤 صوت التلاوة</div>
           <div id="audio-status" style="font-size:9px;color:var(--t3);padding:5px 8px;background:var(--bg3);border-radius:var(--r);margin-bottom:7px;border:1px solid var(--b1)">يُحمَّل الصوت تلقائياً عند التشغيل</div>
-          <div class="fg"><label class="fl">مستوى القارئ</label><div class="sg"><span>🔇</span><input type="range" min="0" max="100" value="100" id="rec-vol" oninput="sv(this,'rec-vol-v','%');updateVolumes()"><span>🔊</span><span class="sv" id="rec-vol-v">100%</span></div></div>
+          <div class="fg"><label class="fl">مستوى القارئ</label><div class="sg"><span>🔇</span><input type="range" min="0" max="100" value="100" id="rec-vol"><span>🔊</span><span class="sv" id="rec-vol-v">100%</span></div></div>
         </div>
         <div class="sec">
           <div class="sec-t">🎵 صوت الخلفية</div>
-          <div class="fu-area"><input type="file" accept="audio/*" id="bg-audio-input" onchange="onBgAudio(this)"><div class="fu-icon">🎵</div><div class="fu-txt">رفع صوت خلفية<br><small>MP3 · AAC · OGG · FLAC · WAV</small></div></div>
+          <div class="fu-area"><input type="file" accept="audio/*" id="bg-audio-input"><div class="fu-icon">🎵</div><div class="fu-txt">رفع صوت خلفية<br><small>MP3 · AAC · OGG · FLAC · WAV</small></div></div>
           <div id="bg-audio-info" style="font-size:9px;color:var(--t3);margin-top:5px"></div>
-          <div class="fg" style="margin-top:7px"><label class="fl">مستوى الخلفية</label><div class="sg"><span>🔇</span><input type="range" min="0" max="100" value="20" id="bg-vol" oninput="sv(this,'bg-vol-v','%');updateVolumes()"><span>🔊</span><span class="sv" id="bg-vol-v">20%</span></div></div>
+          <div class="fg" style="margin-top:7px"><label class="fl">مستوى الخلفية</label><div class="sg"><span>🔇</span><input type="range" min="0" max="100" value="20" id="bg-vol"><span>🔊</span><span class="sv" id="bg-vol-v">20%</span></div></div>
           <div class="tgg"><span class="tgl">تكرار صوت الخلفية</span><label class="tg"><input type="checkbox" id="bg-loop" checked><span class="tgs"></span></label></div>
         </div>
-        <!-- قسم الشعار المخصص -->
         <div class="sec">
           <div class="sec-t">🖼️ شعار مخصص</div>
           <div class="fu-area">
-            <input type="file" accept="image/*,video/quicktime,video/mp4,.mov,.webm" id="logo-upload" onchange="onLogoUpload(this)">
+            <input type="file" accept="image/*,video/quicktime,video/mp4,.mov,.webm" id="logo-upload">
             <div class="fu-icon">🖼️</div>
             <div class="fu-txt">رفع شعار صورة أو فيديو<br><small>PNG · SVG · JPG · <strong>MOV</strong> (شفاف) · WebM</small></div>
           </div>
@@ -650,17 +592,17 @@ body.offline .offline-badge{display:block}
             <div class="fg">
               <label class="fl">الموضع</label>
               <select class="fc" id="logo-pos">
+                <option value="tr" selected>أعلى اليمين</option>
+                <option value="tl">أعلى اليسار</option>
                 <option value="br">أسفل اليمين</option>
                 <option value="bl">أسفل اليسار</option>
-                <option value="tr">أعلى اليمين</option>
-                <option value="tl">أعلى اليسار</option>
                 <option value="center">الوسط</option>
               </select>
             </div>
             <div class="fg">
               <label class="fl">الحجم</label>
               <div class="sg">
-                <input type="range" min="10" max="200" value="60" id="logo-size" oninput="sv(this,'logo-size-v','px')">
+                <input type="range" min="10" max="200" value="60" id="logo-size">
                 <span class="sv" id="logo-size-v">60px</span>
               </div>
             </div>
@@ -668,11 +610,11 @@ body.offline .offline-badge{display:block}
           <div class="fg">
             <label class="fl">الشفافية</label>
             <div class="sg">
-              <input type="range" min="0" max="100" value="80" id="logo-opacity" oninput="sv(this,'logo-opacity-v','%')">
+              <input type="range" min="0" max="100" value="80" id="logo-opacity">
               <span class="sv" id="logo-opacity-v">80%</span>
             </div>
           </div>
-          <button class="btn btn-d bsm" onclick="removeLogo()" style="margin-top:5px;">🗑️ إزالة الشعار</button>
+          <button class="btn btn-d bsm" id="remove-logo-btn" style="margin-top:5px;">🗑️ إزالة الشعار</button>
         </div>
         <div class="sec">
           <div class="sec-t">📊 الموجات الصوتية</div>
@@ -682,7 +624,7 @@ body.offline .offline-badge{display:block}
             <div class="fg"><label class="fl">اللون</label><div class="cpg"><input type="color" id="wave-col" value="#c9a227"></div></div>
             <div class="fg"><label class="fl">الموضع</label><select class="fc" id="wave-pos"><option value="bottom">أسفل</option><option value="top">أعلى</option></select></div>
           </div>
-          <div class="fg"><label class="fl">الارتفاع</label><div class="sg"><input type="range" min="10" max="90" value="30" id="wave-h" oninput="sv(this,'wave-h-v','px')"><span class="sv" id="wave-h-v">30px</span></div></div>
+          <div class="fg"><label class="fl">الارتفاع</label><div class="sg"><input type="range" min="10" max="90" value="30" id="wave-h"><span class="sv" id="wave-h-v">30px</span></div></div>
         </div>
       </div>
 
@@ -691,7 +633,7 @@ body.offline .offline-badge{display:block}
         <div class="sec">
           <div class="sec-t">🎭 التأثيرات البصرية</div>
           <div class="tgg"><span class="tgl">نتوء (Vignette)</span><label class="tg"><input type="checkbox" id="fx-vig"><span class="tgs"></span></label></div>
-          <div class="fg" style="padding-top:3px"><div class="sg"><input type="range" min="0" max="100" value="55" id="vig-str" oninput="sv(this,'vig-str-v','%')"><span class="sv" id="vig-str-v">55%</span></div></div>
+          <div class="fg" style="padding-top:3px"><div class="sg"><input type="range" min="0" max="100" value="55" id="vig-str"><span class="sv" id="vig-str-v">55%</span></div></div>
           <div class="tgg"><span class="tgl">حبوب فيلم (Grain)</span><label class="tg"><input type="checkbox" id="fx-grain"><span class="tgs"></span></label></div>
           <div class="tgg"><span class="tgl">إطار ذهبي متوهج</span><label class="tg"><input type="checkbox" id="fx-gold"><span class="tgs"></span></label></div>
           <div class="tgg"><span class="tgl">نجوم متلألئة</span><label class="tg"><input type="checkbox" id="fx-stars"><span class="tgs"></span></label></div>
@@ -711,7 +653,7 @@ body.offline .offline-badge{display:block}
           <div class="sec-t">🎨 طبقة لونية</div>
           <div class="grid2">
             <div class="fg"><label class="fl">اللون</label><div class="cpg"><input type="color" id="ov-col" value="#000000"></div></div>
-            <div class="fg"><label class="fl">الشفافية</label><div class="sg"><input type="range" min="0" max="70" value="0" id="ov-op" oninput="sv(this,'ov-op-v','%')"><span class="sv" id="ov-op-v">0%</span></div></div>
+            <div class="fg"><label class="fl">الشفافية</label><div class="sg"><input type="range" min="0" max="70" value="0" id="ov-op"><span class="sv" id="ov-op-v">0%</span></div></div>
           </div>
         </div>
       </div>
@@ -723,10 +665,9 @@ body.offline .offline-badge{display:block}
           <div class="tpl-grid" id="tpl-grid"></div>
           <p id="tpl-empty" style="display:none;text-align:center;color:var(--t3);font-size:10px;padding:14px 0">لا توجد قوالب بعد</p>
         </div>
-        <button class="btn btn-a bfw" onclick="openModal('tpl-modal')">➕ حفظ الإعدادات الحالية</button>
+        <button class="btn btn-a bfw" id="open-tpl-modal-from-tab">➕ حفظ الإعدادات الحالية</button>
       </div>
 
-      <!-- ABOUT -->
       <!-- SETTINGS -->
       <div class="tp" id="tab-settings">
         <div class="sec">
@@ -746,7 +687,7 @@ body.offline .offline-badge{display:block}
             </select>
           </div>
           <div class="fg"><label class="fl">جودة الصورة (Mbps)</label>
-            <div class="sg"><input type="range" min="2" max="20" value="8" id="export-vbr" oninput="sv(this,'export-vbr-v',' Mbps')"><span class="sv" id="export-vbr-v">8 Mbps</span></div>
+            <div class="sg"><input type="range" min="2" max="20" value="8" id="export-vbr"><span class="sv" id="export-vbr-v">8 Mbps</span></div>
           </div>
         </div>
         <div class="sec">
@@ -761,7 +702,7 @@ body.offline .offline-badge{display:block}
         <div class="sec">
           <div class="sec-t">🔊 الصوت عند المعاينة</div>
           <div class="tgg"><span class="tgl">تشغيل الصوت تلقائياً</span><label class="tg"><input type="checkbox" id="auto-play-audio" checked><span class="tgs"></span></label></div>
-          <div class="tgg"><span class="tgl">إظهار مؤشر الصوت</span><label class="tg"><input type="checkbox" id="show-audio-status" checked onchange="$('audio-status').style.display=this.checked?'':'none'"><span class="tgs"></span></label></div>
+          <div class="tgg"><span class="tgl">إظهار مؤشر الصوت</span><label class="tg"><input type="checkbox" id="show-audio-status" checked><span class="tgs"></span></label></div>
         </div>
         <div class="sec">
           <div class="sec-t">📱 عرض الأدوات (موبايل)</div>
@@ -776,18 +717,23 @@ body.offline .offline-badge{display:block}
         </div>
         <div class="sec">
           <div class="sec-t">🗑️ إعادة الضبط</div>
-          <button class="btn btn-d bfw" onclick="resetAllSettings()">⚠️ إعادة جميع الإعدادات للافتراضي</button>
+          <button class="btn btn-d bfw" id="reset-settings-btn">⚠️ إعادة جميع الإعدادات للافتراضي</button>
         </div>
       </div>
 
+      <!-- ABOUT -->
       <div class="tp" id="tab-about">
-        <div class="about-logo"><div class="al-icon">📿</div><h2>GT-SQR</h2><p>GnuTux Short Quran Reels v2.0</p></div>
+        <div class="about-logo">
+          <img src="GT-SQR-icons/all/256x256/gt-sqr-icon.png" class="al-icon" alt="GT-SQR" style="width:80px;height:80px;">
+          <h2>GT-SQR</h2>
+          <p>GnuTux Short Quran Reels v2.0</p>
+        </div>
         <div class="sec">
           <div class="sec-t">📋 المشروع</div>
           <div class="info-row"><span class="info-k">الإصدار</span><span class="info-v">2.0.0</span></div>
           <div class="info-row"><span class="info-k">المطور</span><span class="info-v"><a href="https://github.com/SalehGnuTux" target="_blank">@SalehGnuTux</a></span></div>
           <div class="info-row"><span class="info-k">المستودع</span><span class="info-v"><a href="https://github.com/SalehGnuTux/GT-SQR" target="_blank">GitHub/GT-SQR</a></span></div>
-          <div class="info-row"><span class="info-k">الرخصة</span><span class="info-v">GPLv2</span></div>
+          <div class="info-row"><span class="info-k">الرخصة</span><span class="info-v">GPLv3</span></div>
         </div>
         <div class="sec">
           <div class="sec-t">🔌 المصادر</div>
@@ -810,13 +756,13 @@ body.offline .offline-badge{display:block}
     </div>
     <div class="pbar-wrap">
       <div class="progrow">
-        <button class="pbtn" id="btn-play" onclick="togglePlay()">▶️</button>
-        <div class="pbar" id="pbar" onclick="seekClick(event)"><div class="pfill" id="pfill"></div></div>
+        <button class="pbtn" id="btn-play">▶️</button>
+        <div class="pbar" id="pbar"><div class="pfill" id="pfill"></div></div>
         <span class="ptime" id="ptime">0:00 / 0:00</span>
       </div>
       <div class="pbtns">
-        <button class="pbtn" onclick="prevAya()">⏮</button>
-        <button class="pbtn" onclick="nextAya()">⏭</button>
+        <button class="pbtn" id="next-aya-btn" title="الآية التالية">⏭</button>
+        <button class="pbtn" id="prev-aya-btn" title="الآية السابقة">⏮</button>
         <div class="aya-ind" id="aya-ind">الآية 1/7</div>
       </div>
     </div>
@@ -826,23 +772,9 @@ body.offline .offline-badge{display:block}
 
 <div id="exbar">
   <div class="ex-info" id="ex-info">جاهز • يتضمن التصدير صوت القرآن وصوت الخلفية بمدة دقيقة</div>
-  <button class="btn btn-g bsm" onclick="togglePlay()">👁️ <span>معاينة</span></button>
-  <button class="btn btn-p bsm" onclick="startExport('webm')">🎬 <span>WebM</span></button>
-  <button class="btn btn-a" onclick="startExport('mp4')">📥 MP4</button>
-</div>
-
-<!-- شريط تثبيت PWA -->
-<div id="pwa-bar">
-  <img src="gt-sqr-icons/192x192/gt-sqr-icon.png" class="pwa-icon" alt="GT-SQR"
-       onerror="this.src='gt-sqr-icons/512x512/gt-sqr-icon.png'">
-  <div class="pwa-txt">
-    <strong>تثبيت GT-SQR</strong>
-    <small>استخدمه بدون إنترنت · أيقونة في الشاشة الرئيسية</small>
-  </div>
-  <div class="pwa-btns">
-    <button class="btn btn-a bsm" onclick="installPwa()">📥 تثبيت</button>
-    <button class="btn btn-g bsm" onclick="hidePwaBanner()">✕</button>
-  </div>
+  <button class="btn btn-g bsm" id="toggle-play-btn">👁️ <span>معاينة</span></button>
+  <button class="btn btn-p bsm" id="export-webm-btn">🎬 <span>WebM</span></button>
+  <button class="btn btn-a" id="export-mp4-btn">📥 MP4</button>
 </div>
 
 <script src="app.js"></script>
