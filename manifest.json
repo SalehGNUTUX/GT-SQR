@@ -1,60 +1,41 @@
 {
-  "id": "gt-sqr-gnutux",
   "name": "GT-SQR — صانع ريلز القرآن الكريم",
   "short_name": "GT-SQR",
-  "description": "GnuTux Short Quran Reels — صانع مقاطع القرآن الكريم الاحترافي",
+  "description": "gnutux Short Quran Reels — صانع ريلز القرآن المتقدم",
   "start_url": "./index.html",
-  "scope": "./",
   "display": "standalone",
   "background_color": "#020b05",
-  "theme_color": "#0a2e1e",
+  "theme_color": "#040c08",
   "orientation": "any",
   "lang": "ar",
   "dir": "rtl",
   "icons": [
     {
-      "src": "gt-sqr-icons/16x16/gt-sqr-icon.png",
+      "src": "GT-SQR-icons/favicon/favicon-16x16.png",
       "sizes": "16x16",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     },
     {
-      "src": "gt-sqr-icons/32x32/gt-sqr-icon.png",
+      "src": "GT-SQR-icons/favicon/favicon-32x32.png",
       "sizes": "32x32",
-      "type": "image/png",
-      "purpose": "any"
+      "type": "image/png"
     },
     {
-      "src": "gt-sqr-icons/192x192/gt-sqr-icon.png",
+      "src": "GT-SQR-icons/favicon/favicon-48x48.png",
+      "sizes": "48x48",
+      "type": "image/png"
+    },
+    {
+      "src": "GT-SQR-icons/all/192x192/gt-sqr-icon.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
-      "src": "gt-sqr-icons/192x192/gt-sqr-icon.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "gt-sqr-icons/512x512/gt-sqr-icon.png",
+      "src": "GT-SQR-icons/all/512x512/gt-sqr-icon.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "gt-sqr-icons/512x512/gt-sqr-icon.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "screenshot/Screenshot_20260309_214310.png",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "GT-SQR واجهة التطبيق"
+      "purpose": "any maskable"
     }
   ],
   "categories": ["utilities", "productivity"],
@@ -62,7 +43,6 @@
     {
       "name": "مشروع جديد",
       "url": "./index.html",
-      "icons": [{ "src": "gt-sqr-icons/192x192/gt-sqr-icon.png", "sizes": "192x192" }],
       "description": "بدء مشروع ريلز جديد"
     }
   ]
