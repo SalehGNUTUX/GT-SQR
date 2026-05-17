@@ -1,4 +1,5 @@
-[
+// مولَّد تلقائياً من fonts/fonts.json — للعمل تحت file:// بدون fetch
+window.FONTS_DATA = [
   {
     "name": "Amiri Quran",
     "file": "amiri-quran.ttf",
@@ -79,4 +80,4 @@
     "file": "Arslan%20Wessam.ttf",
     "sample": "بِسْمِ اللَّهِ"
   }
-]
+];

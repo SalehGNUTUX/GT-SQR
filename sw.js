@@ -1,6 +1,7 @@
-// GT-SQR Service Worker v3
+// GT-SQR Service Worker v8 — release v3.0.0
 // يجب رفع رقم الإصدار عند كل تحديث للملفات
-const CACHE_VER = "gt-sqr-v3";
+// v8: bump to v3.0 release (surah name + all v3 features)
+const CACHE_VER = "gt-sqr-v8";
 
 // الأصول المطلوبة لعمل التطبيق بدون إنترنت
 // ⚠️ أي ملف هنا غير موجود سيمنع تسجيل SW بالكامل
@@ -12,11 +13,19 @@ const REQUIRED = [
 
 // الأصول الاختيارية (فشلها لا يوقف التثبيت)
 const OPTIONAL = [
+  // الأيقونات
   "./gt-sqr-icons/192x192/gt-sqr-icon.png",
   "./gt-sqr-icons/512x512/gt-sqr-icon.png",
   "./gt-sqr-icons/32x32/gt-sqr-icon.png",
   "./gt-sqr-icons/16x16/gt-sqr-icon.png",
+  // محرّك التصدير الحتمي V2 + WebCodecs muxers (v2.1.0)
+  "./mp4-muxer.js",
+  "./webm-muxer.js",
+  "./export-engine-web.js",
+  // بيانات الخطوط المضمَّنة (تعمل تحت file:// و HTTP)
+  "./fonts-data.js",
   "./fonts/fonts.json",
+  // Google Fonts CSS (احتياط للخطوط البعيدة)
   "https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Reem+Kufi:wght@400;700&family=Scheherazade+New:wght@400;700&family=Cairo:wght@300;400;600;700;900&family=Noto+Naskh+Arabic:wght@400;700&family=Lateef:wght@400;700&family=Harmattan:wght@400;700&family=Markazi+Text:ital,wght@0,400;0,700;1,400&family=Aref+Ruqaa&display=swap"
 ];
 

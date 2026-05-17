@@ -1,7 +1,8 @@
 {
   "name": "GT-SQR — صانع ريلز القرآن الكريم",
   "short_name": "GT-SQR",
-  "description": "gnutux Short Quran Reels — صانع ريلز القرآن المتقدم",
+  "version": "3.0.0",
+  "description": "GT-SQR v3.0 — محرّك تصدير حتمي WebCodecs + بحث الآيات + قرآن محلي + كلمة-بكلمة + خلفيات متعددة بانتقالات + 16 خط + 10 رسوم متحركة + 9 أنماط لون + 9 أشكال دبدبات + قوالب منصات + اسم السورة",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#020b05",

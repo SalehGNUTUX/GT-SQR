@@ -48,6 +48,82 @@ const THEMES = {
 const QURAN_API  = "https://api.alquran.cloud/v1";
 const AUDIO_BASE = "https://everyayah.com/data";
 
+// ── PWA Install Banner ───────────────────────────────
+let _pwaPrompt = null;
+function initPwaInstall() {
+  window.addEventListener("beforeinstallprompt", e => {
+    e.preventDefault();
+    _pwaPrompt = e;
+    showPwaBanner();
+    console.log("[PWA] Install prompt captured");
+  });
+  window.addEventListener("appinstalled", () => {
+    _pwaPrompt = null;
+    hidePwaBanner();
+    toast("✅ تم تثبيت GT-SQR بنجاح!", "success");
+  });
+}
+function showPwaBanner() {
+  const bar = document.getElementById("pwa-bar");
+  if (bar) bar.style.display = "flex";
+}
+function hidePwaBanner() {
+  const bar = document.getElementById("pwa-bar");
+  if (bar) bar.style.display = "none";
+}
+async function installPwa() {
+  if (!_pwaPrompt) {
+    toast("⚠️ التثبيت غير متاح في هذا المتصفح أو التطبيق مثبت مسبقاً", "info");
+    return;
+  }
+  _pwaPrompt.prompt();
+  const { outcome } = await _pwaPrompt.userChoice;
+  if (outcome === "accepted") toast("⏳ جاري التثبيت…", "info");
+  else                         toast("تم الإلغاء", "info");
+  _pwaPrompt = null;
+  hidePwaBanner();
+}
+
+// ── نظام كتم المعاينة + كتم التصدير (مماثل للمكتبية) ───
+function togglePreviewMute() {
+  S.previewMuted = !S.previewMuted;
+  _applyPreviewMute();
+  const btn = document.getElementById("mute-preview-btn");
+  if (btn) {
+    btn.textContent = S.previewMuted ? "🔇" : "🔊";
+    btn.title       = S.previewMuted ? "رفع كتم المعاينة" : "كتم صوت المعاينة";
+    btn.classList.toggle("btn-muted", S.previewMuted);
+  }
+}
+function _applyPreviewMute() {
+  const muted = !!S.previewMuted;
+  // كتم/رفع الصوت لمصادر التلاوة وصوت الخلفية الموسيقي
+  if (S.recAudioEl) S.recAudioEl.muted = muted;
+  if (S.bgAudioEl)  S.bgAudioEl.muted  = muted;
+  // كتم صوت فيديوهات الخلفية (مع احترام تفعيل صوت كل مقطع)
+  if (Array.isArray(S.bgVidItems)) {
+    S.bgVidItems.forEach(it => {
+      if (it.vid) it.vid.muted = muted || !it.audioEnabled;
+    });
+  }
+}
+
+function initExportMuteState() {
+  // اقرأ الإعداد من checkbox وطبّقه على المسار MediaRecorder القديم
+  const cb = document.getElementById("mute-on-export");
+  S.exportMuted = (cb && cb.checked) || S.muteOnExport;
+  _applyExportMute();
+}
+function cleanupExportMute() {
+  S.exportMuted = false;
+  _applyExportMute();
+}
+function _applyExportMute() {
+  // المسار V2 صامت دائماً (لا audio playback)؛ هذه للـ MediaRecorder fallback
+  if (S.recAudioEl) S.recAudioEl.muted = S.exportMuted || S.previewMuted;
+  if (S.bgAudioEl)  S.bgAudioEl.muted  = S.exportMuted || S.previewMuted;
+}
+
 // ── GLOBAL STATE ───────────────────────────────────────
 const S = {
   surahs: [], verses: [], translations: [],
@@ -55,6 +131,11 @@ const S = {
   elapsed: 0, lastRafTs: null,
   ayaDurations: [],
   bgImg: null, bgVid: null,
+  bgVidItems: [], // [{file, vid, name, dur, url}] — playlist لخلفية الفيديو
+  mixedAnimsOrder: [],  // ترتيب التأثيرات المُفعَّلة في وضع "مختلط"
+  bgVidActiveIdx: 0,
+  bgVidNext: null,
+  bgVidFadeProgress: 0,
   bgMotionT: 0,
   audioCtx: null, analyser: null, exportDest: null,
   recAudioEl: null, recAudioSource: null, recGainNode: null,
@@ -63,6 +144,10 @@ const S = {
   waveData: new Uint8Array(64).fill(0),
   stars: [], bokeh: [],
   exportCancel: false, mediaRecorder: null, exportChunks: [],
+  exportCancelRef: null, // مرجع إلغاء محرك WebCodecs V2
+  muteOnExport: false,     // الإعداد من checkbox
+  exportMuted:  false,     // الحالة الحالية
+  previewMuted: false,     // كتم المعاينة فقط
   exporting: false, exportSources: [],
   templates: [], reciters: [...RECITERS_LIST],
   allFonts: [...BUILT_IN_FONTS],
@@ -87,11 +172,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   startRenderLoop();
   await loadLocalFonts(false);
   await loadSurahList();
-  restoreAllSettings();
-  initAutoSave();
+  // ⚠️ الترتيب: سجّل المستمعين أولاً، ثم استعد الإعدادات حتى تصل أحداث change إلى المعالجات
   initEventListeners();
-  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => { });
+  restoreAllSettings();
+  restoreLogo();
+  restoreMixedAnimsOrder();
+  initAutoSave();
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    navigator.serviceWorker.register("sw.js").catch(() => { });
+  }
   initMobileLayout();
+  initPwaInstall();
+  // حمّل فهرس القرآن الكامل في الخلفية للعمل دون اتصال
+  preloadQuranIndex();
 });
 
 // ══════════════════════════════════════════════════════
@@ -124,6 +217,16 @@ function initEventListeners() {
 
   const togglePlayBtn = $("toggle-play-btn");
   if (togglePlayBtn) togglePlayBtn.addEventListener("click", togglePlay);
+  const mutePreviewBtn = $("mute-preview-btn");
+  if (mutePreviewBtn) mutePreviewBtn.addEventListener("click", togglePreviewMute);
+  const muteOnExportCb = $("mute-on-export");
+  if (muteOnExportCb) muteOnExportCb.addEventListener("change", (e) => { S.muteOnExport = e.target.checked; });
+
+  // PWA install banner
+  const installPwaBtn = $("install-pwa-btn");
+  if (installPwaBtn) installPwaBtn.addEventListener("click", installPwa);
+  const hidePwaBtn = $("hide-pwa-banner-btn");
+  if (hidePwaBtn) hidePwaBtn.addEventListener("click", hidePwaBanner);
   const btnPlay = $("btn-play");
   if (btnPlay) btnPlay.addEventListener("click", togglePlay);
 
@@ -157,6 +260,22 @@ function initEventListeners() {
   document.querySelectorAll('input[name="bgt"]').forEach(radio => {
     radio.addEventListener("change", onBgTypeChange);
   });
+  document.querySelectorAll('input[name="tanim"]').forEach(radio => {
+    radio.addEventListener("change", onTanimChange);
+  });
+  document.querySelectorAll(".mix-anim").forEach(cb => {
+    cb.addEventListener("change", onMixAnimChange);
+  });
+  // قالب جاهز
+  const presetSel = $("preset-sel");
+  if (presetSel) presetSel.addEventListener("change", onPresetChange);
+
+  // إظهار/إخفاء لوحة إعدادات اسم السورة
+  const snameOn = $("sname-on");
+  if (snameOn) snameOn.addEventListener("change", (e) => {
+    const ctrl = $("sname-ctrl");
+    if (ctrl) ctrl.style.display = e.target.checked ? "block" : "none";
+  });
   const surahSel = $("surah-sel");
   if (surahSel) surahSel.addEventListener("change", onSurahChange);
   const transSel = $("trans-sel");
@@ -168,6 +287,10 @@ function initEventListeners() {
   const sliders = [
     { id: "aya-dur", outId: "aya-dur-v", unit: "s" },
     { id: "trans-dur", outId: "trans-dur-v", unit: "s" },
+    { id: "aya-gap", outId: "aya-gap-v", unit: "s" },
+    { id: "wave-gain", outId: "wave-gain-v", unit: "%" },
+    { id: "sname-y", outId: "sname-y-v", unit: "%" },
+    { id: "sname-size", outId: "sname-size-v", unit: "%" },
     { id: "orn-op", outId: "orn-op-v", unit: "%" },
     { id: "dim", outId: "dim-v", unit: "%" },
     { id: "bright", outId: "bright-v", unit: "%" },
@@ -183,6 +306,15 @@ function initEventListeners() {
     { id: "vig-str", outId: "vig-str-v", unit: "%" },
     { id: "ov-op", outId: "ov-op-v", unit: "%" },
     { id: "export-vbr", outId: "export-vbr-v", unit: " Mbps" },
+    { id: "pixel-size", outId: "pixel-size-v", unit: "" },
+    { id: "mosaic-size", outId: "mosaic-size-v", unit: "" },
+    { id: "ripple-amp", outId: "ripple-amp-v", unit: "" },
+    { id: "wave-amp", outId: "wave-amp-v", unit: "" },
+    { id: "swirl-factor", outId: "swirl-factor-v", unit: "" },
+    { id: "kaleido-segments", outId: "kaleido-segments-v", unit: "" },
+    { id: "glitch-intensity", outId: "glitch-intensity-v", unit: "" },
+    { id: "word-fade-ms", outId: "word-fade-ms-v", unit: "ms" },
+    { id: "bg-crossfade-ms", outId: "bg-crossfade-ms-v", unit: "ms" },
   ];
   sliders.forEach(s => {
     const el = $(s.id);
@@ -213,14 +345,47 @@ function initEventListeners() {
   if (bgVidInput) bgVidInput.addEventListener("change", (e) => onBgMedia(e.target, "video"));
   const bgAudioInput = $("bg-audio-input");
   if (bgAudioInput) bgAudioInput.addEventListener("change", (e) => onBgAudio(e.target));
+
+  // تقطيع زمني للوسائط المحلية (نفس النهج في النسختين)
+  const bgVidTrimOn = $("bg-vid-trim-on");
+  if (bgVidTrimOn) bgVidTrimOn.addEventListener("change", (e) => {
+    const row = $("bg-vid-trim-row");
+    if (row) row.style.display = e.target.checked ? "block" : "none";
+    if (e.target.checked && S.bgVid) applyBgVidTrim();
+  });
+  ["bg-vid-trim-start","bg-vid-trim-end"].forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener("input", () => { if (ge("bg-vid-trim-on")) applyBgVidTrim(); });
+  });
+  const bgAudioTrimOn = $("bg-audio-trim-on");
+  if (bgAudioTrimOn) bgAudioTrimOn.addEventListener("change", (e) => {
+    const row = $("bg-audio-trim-row");
+    if (row) row.style.display = e.target.checked ? "block" : "none";
+    if (e.target.checked && S.bgAudioEl) applyBgAudioTrim();
+  });
+  ["bg-audio-trim-start","bg-audio-trim-end"].forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener("input", () => { if (ge("bg-audio-trim-on")) applyBgAudioTrim(); });
+  });
   const logoUpload = $("logo-upload");
   if (logoUpload) logoUpload.addEventListener("change", (e) => onLogoUpload(e.target));
   const removeLogoBtn = $("remove-logo-btn");
   if (removeLogoBtn) removeLogoBtn.addEventListener("click", removeLogo);
 
-  // Search
+  // Search (surah name + verse content)
   const surahSearch = $("surah-search");
   if (surahSearch) surahSearch.addEventListener("input", (e) => filterSurahs(e.target.value));
+
+  const verseSearchInp = $("verse-search-inp");
+  if (verseSearchInp) {
+    const debouncedSearch = debounce(onVerseSearchInput, 200);
+    verseSearchInp.addEventListener("input", debouncedSearch);
+    verseSearchInp.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { clearVerseSearch(); verseSearchInp.blur(); }
+    });
+  }
+  const verseSearchClear = $("verse-search-clear-btn");
+  if (verseSearchClear) verseSearchClear.addEventListener("click", clearVerseSearch);
 
   // Mobile
   const panelSizeSlider = $("panel-size-slider");
@@ -252,7 +417,7 @@ const SETTINGS_KEY = "gt_sqr_settings_v2";
 const RECITERS_KEY = "gt_sqr_reciters_v2";
 
 const SETTINGS_SKIP = new Set([
-  "tpl-name-inp","surah-sel","from-aya","to-aya","surah-search",
+  "tpl-name-inp","surah-sel","from-aya","to-aya","surah-search","verse-search-inp","preset-sel",
   "bg-img-input","bg-vid-input","bg-audio-input",
   "custom-fonts-input","logo-upload",
   "ar-name","ar-flag","ar-folder",
@@ -340,9 +505,18 @@ function startRenderLoop() {
   S.rafId = requestAnimationFrame(loop);
 }
 
+// ── فاصل صمت بين الآيات ──────────────────────────────
+function getAyaGap() {
+  return Math.max(0, parseFloat(gv("aya-gap")) || 0);
+}
+function getEffectiveDur(i) {
+  const audioDur = (S.ayaDurations[i] && S.ayaDurations[i] > 0.5) ? S.ayaDurations[i] : (parseFloat(gv("aya-dur")) || 6);
+  return audioDur + getAyaGap();
+}
+
 function checkAyaAdvance() {
   if (S.exporting) return;
-  const dur = S.ayaDurations[S.currentAya] || parseFloat(gv("aya-dur")) || 6;
+  const dur = getEffectiveDur(S.currentAya);
   if (S.elapsed >= dur) {
     if (S.currentAya < S.verses.length - 1) {
       S.currentAya++;
@@ -362,14 +536,57 @@ function checkAyaAdvance() {
 // ══════════════════════════════════════════════════════
 function initCanvas() { onFmtChange(); }
 
+const FMT_SIZES = {
+  "9:16": { w: 720,  h: 1280 },
+  "16:9": { w: 1280, h: 720  },
+  "1:1":  { w: 1080, h: 1080 },
+  "4:5":  { w: 1080, h: 1350 },
+};
+
 function onFmtChange() {
   const fmt = radioVal("fmt");
   const cv = $("cv");
-  const sizes = { "9:16": { w: 720, h: 1280 }, "16:9": { w: 1280, h: 720 }, "1:1": { w: 1080, h: 1080 } };
-  const sz = sizes[fmt] || sizes["9:16"];
+  const sz = FMT_SIZES[fmt] || FMT_SIZES["9:16"];
   cv.width = sz.w; cv.height = sz.h;
-  $("fmt-lbl").textContent = fmt;
+  const lbl = $("fmt-lbl");
+  if (lbl) lbl.textContent = fmt;
   fitCanvas();
+}
+
+// ── القوالب الجاهزة للمنصات الشهيرة ──────────────────
+const PRESETS = {
+  "reel-fhd": { fmt: "9:16", w: 1080, h: 1920, fps: 30, vbr: 10, label: "Reels/Shorts/TikTok 1080×1920" },
+  "reel-hd":  { fmt: "9:16", w: 720,  h: 1280, fps: 30, vbr: 6,  label: "Reels 720×1280 (سريع)" },
+  "yt-fhd":   { fmt: "16:9", w: 1920, h: 1080, fps: 30, vbr: 12, label: "YouTube 1920×1080" },
+  "yt-hd":    { fmt: "16:9", w: 1280, h: 720,  fps: 30, vbr: 8,  label: "YouTube 1280×720" },
+  "ig-sq":    { fmt: "1:1",  w: 1080, h: 1080, fps: 30, vbr: 8,  label: "Instagram Square 1080" },
+  "ig-port":  { fmt: "4:5",  w: 1080, h: 1350, fps: 30, vbr: 8,  label: "Instagram Portrait 1080×1350" },
+  "cinema":   { fmt: "16:9", w: 2560, h: 1080, fps: 30, vbr: 15, label: "Cinema 2560×1080 (21:9)" },
+};
+
+function applyPreset(name) {
+  const p = PRESETS[name];
+  if (!p) return;
+  FMT_SIZES[p.fmt] = { w: p.w, h: p.h };
+  const fmtRadio = document.querySelector(`input[name="fmt"][value="${p.fmt}"]`);
+  if (fmtRadio) fmtRadio.checked = true;
+  const cv = $("cv");
+  cv.width = p.w; cv.height = p.h;
+  const lbl = $("fmt-lbl");
+  if (lbl) lbl.textContent = p.fmt;
+  fitCanvas();
+  const fpsEl = $("export-fps");
+  if (fpsEl) fpsEl.value = String(p.fps);
+  const vbrEl = $("export-vbr");
+  if (vbrEl) { vbrEl.value = String(p.vbr); if (typeof sv === "function") sv(vbrEl, "export-vbr-v", " Mbps"); }
+  toast(`✅ تم تطبيق قالب: ${p.label}`, "success", 3000);
+}
+
+function onPresetChange(e) {
+  const v = e.target.value;
+  if (!v) return;
+  applyPreset(v);
+  setTimeout(() => { e.target.value = ""; }, 100);
 }
 
 function fitCanvas() {
@@ -404,7 +621,17 @@ function drawFrame(ts) {
   drawOrnament(ctx, W, H, ts);
   if (ge("fx-stars")) drawStars(ctx, W, H, ts);
   if (ge("fx-rays")) drawRays(ctx, W, H, ts);
+  // التأثيرات الإضافية (per-pixel — قد تكون ثقيلة)
+  if (ge("fx-pixel"))   applyPixelate(ctx, W, H);
+  if (ge("fx-mosaic"))  applyMosaic(ctx, W, H);
+  if (ge("fx-ripple"))  applyRipple(ctx, W, H, ts);
+  if (ge("fx-wave"))    applyWave(ctx, W, H, ts);
+  if (ge("fx-swirl"))   applySwirl(ctx, W, H);
+  if (ge("fx-kaleido")) applyKaleido(ctx, W, H);
+  if (ge("fx-glitch"))  applyGlitch(ctx, W, H);
+  if (ge("fx-oldfilm")) applyOldFilm(ctx, W, H, ts);
   if (S.verses.length) drawVerse(ctx, W, H, ts);
+  drawSurahName(ctx, W, H);
   drawWave(ctx, W, H, ts);
   drawLogo(ctx, W, H);
   drawWatermark(ctx, W, H);
@@ -433,9 +660,17 @@ function drawBg(ctx, W, H, ts) {
     ctx.restore();
   } else if (bgt === "video" && S.bgVid) {
     if (S.bgVid.readyState >= 2) {
+      // Crossfade سلس بين مقطعَين في playlist
+      updateBgVidCrossfade();
+      const alpha = S.bgVidFadeProgress;
       ctx.save();
       applyBgMotion(ctx, W, H, bgm, ts);
+      ctx.globalAlpha = 1 - alpha;
       imgCover(ctx, S.bgVid, 0, 0, W, H);
+      if (S.bgVidNext && S.bgVidNext.readyState >= 2 && alpha > 0) {
+        ctx.globalAlpha = alpha;
+        imgCover(ctx, S.bgVidNext, 0, 0, W, H);
+      }
       ctx.restore();
     } else {
       drawGradient(ctx, W, H);
@@ -488,10 +723,73 @@ function applyColorFilter(ctx, W, H) {
   if (cf === "none") return;
   const id = ctx.getImageData(0, 0, W, H);
   const d = id.data;
-  for (let i = 0; i < d.length; i += 4) {
-    if (cf === "bw") { const g = d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11; d[i] = d[i + 1] = d[i + 2] = g; }
-    if (cf === "warm") { d[i] = Math.min(255, d[i] * 1.12); d[i + 2] = Math.max(0, d[i + 2] * .88); }
-    if (cf === "cold") { d[i] = Math.max(0, d[i] * .88); d[i + 2] = Math.min(255, d[i + 2] * 1.12); }
+  const len = d.length;
+  switch (cf) {
+    case "bw":
+      for (let i = 0; i < len; i += 4) {
+        const g = d[i] * .3 + d[i+1] * .59 + d[i+2] * .11;
+        d[i] = d[i+1] = d[i+2] = g;
+      }
+      break;
+    case "warm":
+      for (let i = 0; i < len; i += 4) {
+        d[i]   = Math.min(255, d[i] * 1.12);
+        d[i+2] = Math.max(0,   d[i+2] * .88);
+      }
+      break;
+    case "cold":
+      for (let i = 0; i < len; i += 4) {
+        d[i]   = Math.max(0,   d[i] * .88);
+        d[i+2] = Math.min(255, d[i+2] * 1.12);
+      }
+      break;
+    case "sepia":
+      for (let i = 0; i < len; i += 4) {
+        const r = d[i], g = d[i+1], b = d[i+2];
+        d[i]   = Math.min(255, r * .393 + g * .769 + b * .189);
+        d[i+1] = Math.min(255, r * .349 + g * .686 + b * .168);
+        d[i+2] = Math.min(255, r * .272 + g * .534 + b * .131);
+      }
+      break;
+    case "negative":
+      for (let i = 0; i < len; i += 4) {
+        d[i]   = 255 - d[i];
+        d[i+1] = 255 - d[i+1];
+        d[i+2] = 255 - d[i+2];
+      }
+      break;
+    case "saturated":
+      for (let i = 0; i < len; i += 4) {
+        const r = d[i], g = d[i+1], b = d[i+2];
+        const gray = r * .3 + g * .59 + b * .11;
+        d[i]   = Math.min(255, Math.max(0, gray + (r - gray) * 1.6));
+        d[i+1] = Math.min(255, Math.max(0, gray + (g - gray) * 1.6));
+        d[i+2] = Math.min(255, Math.max(0, gray + (b - gray) * 1.6));
+      }
+      break;
+    case "faded":
+      for (let i = 0; i < len; i += 4) {
+        const r = d[i], g = d[i+1], b = d[i+2];
+        const gray = r * .3 + g * .59 + b * .11;
+        d[i]   = Math.min(255, gray + (r - gray) * 0.4 + 20);
+        d[i+1] = Math.min(255, gray + (g - gray) * 0.4 + 20);
+        d[i+2] = Math.min(255, gray + (b - gray) * 0.4 + 20);
+      }
+      break;
+    case "dreamy":
+      for (let i = 0; i < len; i += 4) {
+        d[i]   = Math.min(255, d[i]   * 0.85 + 38);
+        d[i+1] = Math.min(255, d[i+1] * 0.85 + 38);
+        d[i+2] = Math.min(255, d[i+2] * 0.85 + 50);
+      }
+      break;
+    case "night":
+      for (let i = 0; i < len; i += 4) {
+        d[i]   = Math.max(0, d[i]   * 0.55);
+        d[i+1] = Math.max(0, d[i+1] * 0.65);
+        d[i+2] = Math.min(255, d[i+2] * 0.85 + 25);
+      }
+      break;
   }
   ctx.putImageData(id, 0, 0);
 }
@@ -631,7 +929,10 @@ function drawVignette(ctx, W, H) {
 
 function drawGoldBorder(ctx, W, H, ts) {
   const pulse = .5 + .5 * Math.sin(ts * 1.5);
-  const [r, g, b] = hex2rgb($("orn-col").value);
+  // اللون مستقل عن لون الزخرفة — gold-col أولاً ثم orn-col للتوافق
+  const goldEl = $("gold-col");
+  const colorHex = (goldEl && goldEl.value) || $("orn-col").value || "#f0c842";
+  const [r, g, b] = hex2rgb(colorHex);
   ctx.save();
   ctx.shadowColor = `rgba(${r},${g},${b},${.5 + pulse * .3})`; ctx.shadowBlur = 20 + pulse * 10;
   ctx.strokeStyle = `rgba(${r},${g},${b},.85)`; ctx.lineWidth = 2;
@@ -649,9 +950,212 @@ function drawGrain(ctx, W, H) {
   ctx.putImageData(id, 0, 0);
 }
 
+// ===== التأثيرات الجديدة (per-pixel — قد تبطئ الواجهة عند تفعيل عدة منها معاً) =====
+function applyPixelate(ctx, W, H) {
+  const size = parseInt(gv("pixel-size")) || 8;
+  const imageData = ctx.getImageData(0, 0, W, H);
+  const data = imageData.data;
+  for (let y = 0; y < H; y += size) {
+    for (let x = 0; x < W; x += size) {
+      const idx = (y * W + x) * 4;
+      const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+      for (let dy = 0; dy < size; dy++) {
+        for (let dx = 0; dx < size; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < W && ny < H) {
+            const nidx = (ny * W + nx) * 4;
+            data[nidx] = r; data[nidx + 1] = g; data[nidx + 2] = b;
+          }
+        }
+      }
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+function applyMosaic(ctx, W, H) {
+  const size = parseInt(gv("mosaic-size")) || 10;
+  const imageData = ctx.getImageData(0, 0, W, H);
+  const data = imageData.data;
+  for (let y = 0; y < H; y += size) {
+    for (let x = 0; x < W; x += size) {
+      let rSum = 0, gSum = 0, bSum = 0, count = 0;
+      for (let dy = 0; dy < size; dy++) {
+        for (let dx = 0; dx < size; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < W && ny < H) {
+            const nidx = (ny * W + nx) * 4;
+            rSum += data[nidx]; gSum += data[nidx + 1]; bSum += data[nidx + 2]; count++;
+          }
+        }
+      }
+      const rAvg = Math.round(rSum / count), gAvg = Math.round(gSum / count), bAvg = Math.round(bSum / count);
+      for (let dy = 0; dy < size; dy++) {
+        for (let dx = 0; dx < size; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < W && ny < H) {
+            const nidx = (ny * W + nx) * 4;
+            data[nidx] = rAvg; data[nidx + 1] = gAvg; data[nidx + 2] = bAvg;
+          }
+        }
+      }
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+function applyRipple(ctx, W, H, ts) {
+  const amp = parseFloat(gv("ripple-amp")) || 5;
+  const imageData = ctx.getImageData(0, 0, W, H);
+  const data = imageData.data;
+  const newData = new Uint8ClampedArray(data.length);
+  const centerX = W / 2, centerY = H / 2;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - centerX, dy = y - centerY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const angle = Math.atan2(dy, dx) + Math.sin(dist * 0.05 + ts * 5) * amp * 0.1;
+      const srcX = Math.round(centerX + Math.cos(angle) * dist);
+      const srcY = Math.round(centerY + Math.sin(angle) * dist);
+      if (srcX >= 0 && srcX < W && srcY >= 0 && srcY < H) {
+        const srcIdx = (srcY * W + srcX) * 4, dstIdx = (y * W + x) * 4;
+        newData[dstIdx] = data[srcIdx];
+        newData[dstIdx + 1] = data[srcIdx + 1];
+        newData[dstIdx + 2] = data[srcIdx + 2];
+        newData[dstIdx + 3] = data[srcIdx + 3];
+      }
+    }
+  }
+  ctx.putImageData(new ImageData(newData, W, H), 0, 0);
+}
+
+function applyWave(ctx, W, H, ts) {
+  const amp = parseFloat(gv("wave-amp")) || 10;
+  const imageData = ctx.getImageData(0, 0, W, H);
+  const data = imageData.data;
+  const newData = new Uint8ClampedArray(data.length);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const offsetX = Math.sin(y * 0.05 + ts * 5) * amp;
+      const srcX = Math.min(W - 1, Math.max(0, x + offsetX));
+      const srcIdx = (y * W + srcX) * 4, dstIdx = (y * W + x) * 4;
+      newData[dstIdx] = data[srcIdx];
+      newData[dstIdx + 1] = data[srcIdx + 1];
+      newData[dstIdx + 2] = data[srcIdx + 2];
+      newData[dstIdx + 3] = data[srcIdx + 3];
+    }
+  }
+  ctx.putImageData(new ImageData(newData, W, H), 0, 0);
+}
+
+function applySwirl(ctx, W, H) {
+  const factor = parseFloat(gv("swirl-factor")) || 3;
+  const centerX = W / 2, centerY = H / 2;
+  const maxDist = Math.min(centerX, centerY);
+  const imageData = ctx.getImageData(0, 0, W, H);
+  const data = imageData.data;
+  const newData = new Uint8ClampedArray(data.length);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - centerX, dy = y - centerY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < maxDist) {
+        const amount = (maxDist - dist) / maxDist * factor;
+        const angle = Math.atan2(dy, dx) + amount;
+        const srcX = Math.round(centerX + Math.cos(angle) * dist);
+        const srcY = Math.round(centerY + Math.sin(angle) * dist);
+        if (srcX >= 0 && srcX < W && srcY >= 0 && srcY < H) {
+          const srcIdx = (srcY * W + srcX) * 4, dstIdx = (y * W + x) * 4;
+          newData[dstIdx] = data[srcIdx];
+          newData[dstIdx + 1] = data[srcIdx + 1];
+          newData[dstIdx + 2] = data[srcIdx + 2];
+          newData[dstIdx + 3] = data[srcIdx + 3];
+          continue;
+        }
+      }
+      const dstIdx = (y * W + x) * 4;
+      newData[dstIdx]     = data[dstIdx];
+      newData[dstIdx + 1] = data[dstIdx + 1];
+      newData[dstIdx + 2] = data[dstIdx + 2];
+      newData[dstIdx + 3] = data[dstIdx + 3];
+    }
+  }
+  ctx.putImageData(new ImageData(newData, W, H), 0, 0);
+}
+
+function applyKaleido(ctx, W, H) {
+  const segments = parseInt(gv("kaleido-segments")) || 6;
+  const centerX = W / 2, centerY = H / 2;
+  const imageData = ctx.getImageData(0, 0, W, H);
+  const data = imageData.data;
+  const newData = new Uint8ClampedArray(data.length);
+  const angleStep = (Math.PI * 2) / segments;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - centerX, dy = y - centerY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      let angle = Math.atan2(dy, dx);
+      angle = angle % (angleStep * 2);
+      if (angle < 0) angle += angleStep * 2;
+      if (angle > angleStep) angle = angleStep * 2 - angle;
+      const srcX = Math.round(centerX + Math.cos(angle) * dist);
+      const srcY = Math.round(centerY + Math.sin(angle) * dist);
+      if (srcX >= 0 && srcX < W && srcY >= 0 && srcY < H) {
+        const srcIdx = (srcY * W + srcX) * 4, dstIdx = (y * W + x) * 4;
+        newData[dstIdx] = data[srcIdx];
+        newData[dstIdx + 1] = data[srcIdx + 1];
+        newData[dstIdx + 2] = data[srcIdx + 2];
+        newData[dstIdx + 3] = data[srcIdx + 3];
+      }
+    }
+  }
+  ctx.putImageData(new ImageData(newData, W, H), 0, 0);
+}
+
+function applyGlitch(ctx, W, H) {
+  const intensity = parseInt(gv("glitch-intensity")) || 5;
+  const imageData = ctx.getImageData(0, 0, W, H);
+  const data = imageData.data;
+  const shift = Math.floor(intensity / 2);
+  for (let y = 0; y < H; y += intensity * 2) {
+    const offset = (Math.random() - 0.5) * shift;
+    for (let x = 0; x < W; x++) {
+      const srcX = Math.min(W - 1, Math.max(0, x + offset));
+      const srcIdx = (y * W + srcX) * 4, dstIdx = (y * W + x) * 4;
+      data[dstIdx]     = data[srcIdx];
+      data[dstIdx + 1] = data[srcIdx + 1];
+      data[dstIdx + 2] = data[srcIdx + 2];
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
+function applyOldFilm(ctx, W, H, ts) {
+  const imageData = ctx.getImageData(0, 0, W, H);
+  const data = imageData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    data[i]     = Math.min(255, data[i]     * 0.9 + 20);
+    data[i + 1] = Math.min(255, data[i + 1] * 0.7 + 10);
+    data[i + 2] = Math.min(255, data[i + 2] * 0.5 + 5);
+    data[i]     += (Math.random() - 0.5) * 15;
+    data[i + 1] += (Math.random() - 0.5) * 15;
+    data[i + 2] += (Math.random() - 0.5) * 15;
+  }
+  if (Math.random() < 0.02) {
+    const scratchY = Math.floor(Math.random() * H);
+    for (let x = 0; x < W; x++) {
+      const idx = (scratchY * W + x) * 4;
+      for (let c = 0; c < 3; c++) data[idx + c] = 255;
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
 // ══════════════════════════════════════════════════════
 //  LOGO
 // ══════════════════════════════════════════════════════
+const LOGO_PERSIST_KEY = "gt_sqr_logo_v1";
+
 function onLogoUpload(input) {
   const file = input.files[0];
   if (!file) return;
@@ -664,10 +1168,7 @@ function onLogoUpload(input) {
   if (isVideo) {
     const vid = document.createElement("video");
     vid.src = url;
-    vid.loop = true;
-    vid.muted = true;
-    vid.playsInline = true;
-    vid.autoplay = true;
+    vid.loop = true; vid.muted = true; vid.playsInline = true; vid.autoplay = true;
     vid.onloadeddata = () => {
       S.logoVid = vid;
       vid.play().catch(() => {});
@@ -676,7 +1177,8 @@ function onLogoUpload(input) {
       $("logo-vid-preview").src = url;
       $("logo-vid-preview").style.display = "block";
       $("logo-img-preview").style.display = "none";
-      toast("✅ شعار فيديو MOV تم تحميله", "success");
+      toast("✅ شعار فيديو تم تحميله (الفيديو لا يُحفظ — حجمه كبير)", "info", 5000);
+      try { localStorage.removeItem(LOGO_PERSIST_KEY); } catch (_) {}
     };
     vid.onerror = () => toast("❌ فشل تحميل الفيديو", "error");
     vid.load();
@@ -688,10 +1190,21 @@ function onLogoUpload(input) {
       $("logo-img-preview").src = url;
       $("logo-img-preview").style.display = "block";
       $("logo-vid-preview").style.display = "none";
-      toast("✅ تم تحميل الشعار", "success");
+      toast("✅ تم تحميل الشعار — سيُحفظ تلقائياً للمشاريع القادمة", "success");
     };
     img.onerror = () => toast("❌ فشل تحميل الصورة", "error");
     img.src = url;
+
+    // احفظ الشعار كـ dataURL لاستعادته في الجلسات القادمة
+    const fr = new FileReader();
+    fr.onload = () => {
+      try { localStorage.setItem(LOGO_PERSIST_KEY, fr.result); }
+      catch (e) {
+        console.warn("Logo too large for localStorage:", e);
+        toast("⚠️ الشعار يعمل لهذه الجلسة لكن حجمه يتجاوز سعة الحفظ — لن يُستعاد لاحقاً", "info", 4000);
+      }
+    };
+    fr.readAsDataURL(file);
   }
 }
 
@@ -700,7 +1213,26 @@ function removeLogo() {
   S.logoImg = null;
   $("logo-preview").style.display = "none";
   $("logo-upload").value = "";
+  try { localStorage.removeItem(LOGO_PERSIST_KEY); } catch (_) {}
   toast("🗑️ تمت إزالة الشعار", "info");
+}
+
+function restoreLogo() {
+  let dataUrl = null;
+  try { dataUrl = localStorage.getItem(LOGO_PERSIST_KEY); } catch (_) {}
+  if (!dataUrl) return;
+  const img = new Image();
+  img.onload = () => {
+    S.logoImg = img;
+    const prevEl = $("logo-preview");
+    const imgPrev = $("logo-img-preview");
+    const vidPrev = $("logo-vid-preview");
+    if (prevEl) prevEl.style.display = "block";
+    if (imgPrev) { imgPrev.src = dataUrl; imgPrev.style.display = "block"; }
+    if (vidPrev) vidPrev.style.display = "none";
+  };
+  img.onerror = () => { try { localStorage.removeItem(LOGO_PERSIST_KEY); } catch (_) {} };
+  img.src = dataUrl;
 }
 
 function drawLogo(ctx, W, H) {
@@ -741,6 +1273,38 @@ function drawLogo(ctx, W, H) {
 // ══════════════════════════════════════════════════════
 //  VERSE RENDERING
 // ══════════════════════════════════════════════════════
+// ── رسم اسم السورة في أعلى المقطع ─────────────────
+function drawSurahName(ctx, W, H) {
+  if (!ge("sname-on")) return;
+  if (!S.surahs || !S.surahs.length) return;
+  const surahNum = parseInt($("surah-sel")?.value) || 1;
+  const surah = S.surahs.find(s => s.number === surahNum);
+  if (!surah) return;
+
+  const prefix = $("sname-prefix")?.value || "surah";
+  const rawName = surah.name || "";
+  const cleanName = rawName.replace(/^\s*(?:سُورَةُ|سُورَة|سُورة|سورة)\s+/u, "");
+  const label = prefix === "surah" ? `سُورَةُ ${cleanName}`
+              : prefix === "hizb"  ? `حِزْبُ ${cleanName}`
+              :                       cleanName;
+
+  const font = fontVal();
+  const fsz = W * 0.05 * ((parseFloat(gv("sname-size")) || 80) / 100);
+  const yPct = parseFloat(gv("sname-y")) || 5;
+  const y = (yPct / 100) * H + fsz;
+  const col = $("sname-col")?.value || "#f0c842";
+
+  ctx.save();
+  ctx.font = `bold ${fsz}px ${font}`;
+  ctx.fillStyle = col;
+  ctx.textAlign = "center";
+  ctx.direction = "rtl";
+  ctx.shadowColor = "rgba(0,0,0,.7)";
+  ctx.shadowBlur = 10;
+  ctx.fillText(label, W / 2, y);
+  ctx.restore();
+}
+
 function drawVerse(ctx, W, H, ts) {
   const aya = S.verses[S.currentAya]; if (!aya) return;
   const font = fontVal();
@@ -750,20 +1314,82 @@ function drawVerse(ctx, W, H, ts) {
   const lh = parseFloat(gv("lh"));
   const tpos = radioVal("tpos");
   const textEff = radioVal("te");
-  const animType = radioVal("tanim");
+  let animType = radioVal("tanim");
+  // في وضع "مختلط": اختر التأثير الفعلي للآية الحالية
+  if (animType === "mix") animType = getMixedAnimForCurrentAya();
+  const dur = S.ayaDurations[S.currentAya] || 6;
 
   let alpha = 1;
-  if (animType !== "none") {
-    const dur = S.ayaDurations[S.currentAya] || 6;
+  let trX = 0, trY = 0, scX = 1, scY = 1, blurPx = 0, glowBoost = 0;
+
+  if (animType !== "none" && animType !== "word") {
     const w = (S.elapsed % dur) / dur;
-    if (w < .1) alpha = w / .1;
-    else if (w > .88) alpha = (1 - w) / .12;
+    const easeIn = (p) => 1 - Math.pow(1 - p, 3);
+    const IN_END = 0.15, OUT_START = 0.85;
+
+    if (animType === "fade") {
+      if (w < IN_END)        alpha = w / IN_END;
+      else if (w > OUT_START) alpha = (1 - w) / (1 - OUT_START);
+    }
+    else if (animType === "slide") {
+      if (w < IN_END) {
+        const p = w / IN_END; alpha = p;
+        trX = (1 - easeIn(p)) * W * 0.4;
+      } else if (w > OUT_START) {
+        const p = (1 - w) / (1 - OUT_START); alpha = p;
+        trX = -(1 - p) * W * 0.4;
+      }
+    }
+    else if (animType === "zoom") {
+      if (w < IN_END) {
+        const p = w / IN_END; alpha = p;
+        scX = scY = 0.55 + 0.45 * easeIn(p);
+      } else if (w > OUT_START) {
+        const p = (1 - w) / (1 - OUT_START); alpha = p;
+        scX = scY = 1 + (1 - p) * 0.35;
+      }
+    }
+    else if (animType === "drop") {
+      if (w < IN_END) {
+        const p = w / IN_END; alpha = p;
+        trY = -(1 - easeIn(p)) * H * 0.25;
+      } else if (w > OUT_START) alpha = (1 - w) / (1 - OUT_START);
+    }
+    else if (animType === "rise") {
+      if (w < IN_END) {
+        const p = w / IN_END; alpha = p;
+        trY = (1 - easeIn(p)) * H * 0.25;
+      } else if (w > OUT_START) alpha = (1 - w) / (1 - OUT_START);
+    }
+    else if (animType === "blur") {
+      if (w < IN_END) {
+        const p = w / IN_END; alpha = p;
+        blurPx = (1 - p) * 18;
+      } else if (w > OUT_START) {
+        const p = (1 - w) / (1 - OUT_START); alpha = p;
+        blurPx = (1 - p) * 12;
+      }
+    }
+    else if (animType === "glow") {
+      if (w < IN_END) alpha = w / IN_END;
+      else if (w > OUT_START) alpha = (1 - w) / (1 - OUT_START);
+      glowBoost = 12 + 16 * (0.5 + 0.5 * Math.sin(ts * 4));
+    }
   }
 
   ctx.save();
   ctx.textAlign = "center"; ctx.direction = "rtl";
   ctx.globalAlpha = alpha;
-  setTextFx(ctx, textEff, txtCol, shdCol);
+  if (blurPx > 0.5) ctx.filter = `blur(${blurPx}px)`;
+  if (trX || trY || scX !== 1 || scY !== 1) {
+    ctx.translate(W / 2, H / 2);
+    ctx.translate(trX, trY);
+    ctx.scale(scX, scY);
+    ctx.translate(-W / 2, -H / 2);
+  }
+  ctx.font = `${fsz}px ${font}`; ctx.fillStyle = txtCol;
+  const drawTxt = setTextFx(ctx, textEff, txtCol, shdCol);
+  if (glowBoost) ctx.shadowBlur = (ctx.shadowBlur || 0) + glowBoost;
 
   const lines = wrapText(ctx, aya.text, W * .85, fsz, font);
   const lineH = fsz * lh, totalH = lines.length * lineH;
@@ -773,8 +1399,11 @@ function drawVerse(ctx, W, H, ts) {
   else if (tpos === "bottom") startY = H * .82 - totalH + fsz;
   else startY = H * .5 - totalH * (hasT ? .4 : .5) + fsz;
 
-  ctx.font = `${fsz}px ${font}`; ctx.fillStyle = txtCol;
-  lines.forEach((line, i) => ctx.fillText(line, W / 2, startY + i * lineH));
+  if (animType === "word") {
+    drawWordByWord(ctx, lines, W, startY, lineH, fsz, font, txtCol, dur, drawTxt);
+  } else {
+    lines.forEach((line, i) => drawTxt(W / 2, startY + i * lineH, line));
+  }
 
   if (hasT) {
     const tfsPct = gv("tfs") / 100;
@@ -797,18 +1426,228 @@ function drawVerse(ctx, W, H, ts) {
   ctx.restore();
 }
 
+// ── الكشف التدريجي للكلمات ─────────────────────────────
+function drawWordByWord(ctx, lines, W, startY, lineH, fsz, font, txtCol, dur, drawTxt) {
+  const fadeMs = parseInt(gv("word-fade-ms") || "180");
+  const keepPrev = ge("word-keep");
+  const paceVal = $("word-pace")?.value || "auto";
+
+  const wordList = [];
+  lines.forEach((line, lineIdx) => {
+    const words = line.split(/\s+/).filter(Boolean);
+    words.forEach((w, wIdx) => wordList.push({ text: w, lineIdx, wIdx }));
+  });
+
+  const N = wordList.length;
+  if (N === 0) return;
+
+  const wordDuration = (paceVal === "auto") ? (dur / N) : parseFloat(paceVal);
+  const spaceW = ctx.measureText(" ").width;
+
+  const linePositions = lines.map(line => {
+    const words = line.split(/\s+/).filter(Boolean);
+    if (!words.length) return null;
+    const widths = words.map(w => ctx.measureText(w).width);
+    const lineW = widths.reduce((a, b) => a + b, 0) + spaceW * (words.length - 1);
+    const xRight = W / 2 + lineW / 2;
+    const xs = [];
+    let cur = xRight;
+    for (let i = 0; i < words.length; i++) { xs.push(cur); cur -= widths[i] + spaceW; }
+    return xs;
+  });
+
+  const oldAlign = ctx.textAlign;
+  ctx.textAlign = "right";
+
+  for (let k = 0; k < N; k++) {
+    const wordStart = k * wordDuration;
+    if (S.elapsed < wordStart) continue;
+    if (!keepPrev) {
+      const wordEnd = wordStart + wordDuration;
+      if (S.elapsed >= wordEnd) continue;
+    }
+    const sinceStart = S.elapsed - wordStart;
+    let a = 1;
+    if (fadeMs > 0 && sinceStart * 1000 < fadeMs) a = (sinceStart * 1000) / fadeMs;
+    if (!keepPrev) {
+      const fadeOutStart = wordDuration - fadeMs / 1000;
+      if (fadeMs > 0 && sinceStart > fadeOutStart) {
+        a = Math.min(a, (wordDuration - sinceStart) / (fadeMs / 1000));
+      }
+    }
+    a = Math.max(0, Math.min(1, a));
+
+    const w = wordList[k];
+    const xs = linePositions[w.lineIdx];
+    if (!xs) continue;
+    ctx.save();
+    ctx.globalAlpha *= a;
+    ctx.fillStyle = txtCol;
+    if (typeof drawTxt === "function") drawTxt(xs[w.wIdx], startY + w.lineIdx * lineH, w.text);
+    else                                ctx.fillText(w.text, xs[w.wIdx], startY + w.lineIdx * lineH);
+    ctx.restore();
+  }
+  ctx.textAlign = oldAlign;
+}
+
+function onTanimChange() {
+  const v = radioVal("tanim");
+  const wordCtrl = $("word-mode-ctrl");
+  if (wordCtrl) wordCtrl.style.display = (v === "word" || (v === "mix" && S.mixedAnimsOrder.includes("word"))) ? "block" : "none";
+  // عدة لوحات mix-anims-ctrl (في النصوص + FX) — أظهرها كلها
+  document.querySelectorAll(".mix-anims-ctrl").forEach(el => {
+    el.style.display = v === "mix" ? "block" : "none";
+  });
+  // مزامنة كل راديوهات tanim (في القسمَين) مع بعضها
+  document.querySelectorAll(`input[name="tanim"]`).forEach(r => { r.checked = (r.value === v); });
+}
+
+// ── إدارة وضع "مختلط" ────────────────────────────────
+function onMixAnimChange(e) {
+  const v = e.target.value;
+  const order = S.mixedAnimsOrder;
+  if (e.target.checked) {
+    if (!order.includes(v)) order.push(v);
+  } else {
+    const idx = order.indexOf(v);
+    if (idx >= 0) order.splice(idx, 1);
+  }
+  updateMixAnimsUI();
+  try { localStorage.setItem("gt_sqr_mixed_anims", JSON.stringify(order)); } catch (_) {}
+  onTanimChange();
+}
+
+function updateMixAnimsUI() {
+  const order = S.mixedAnimsOrder;
+  document.querySelectorAll(".mix-anim").forEach(cb => {
+    const idx = order.indexOf(cb.value);
+    cb.checked = idx >= 0;
+    const numEl = cb.parentElement.querySelector(".mix-num");
+    if (numEl) numEl.textContent = idx >= 0 ? `[${idx + 1}]` : "";
+  });
+  const labels = { fade:"تلاشي", slide:"انزلاق", zoom:"تكبير", drop:"سقوط", rise:"صعود", blur:"ضبابي", glow:"توهج", word:"كلمة-بكلمة" };
+  const text = order.length
+    ? "الترتيب: " + order.map((v, i) => `${i+1}. ${labels[v] || v}`).join(" ← ")
+    : "— اختر تأثيراً أو أكثر —";
+  document.querySelectorAll(".mix-anims-summary").forEach(el => { el.textContent = text; });
+}
+
+function getMixedAnimForCurrentAya() {
+  const order = S.mixedAnimsOrder;
+  if (!order.length) return "fade";
+  return order[(S.currentAya || 0) % order.length];
+}
+
+function restoreMixedAnimsOrder() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("gt_sqr_mixed_anims") || "[]");
+    if (Array.isArray(saved)) S.mixedAnimsOrder = saved.filter(v => typeof v === "string");
+  } catch (_) {}
+  updateMixAnimsUI();
+}
+
+// ── تأثيرات النص — يُهيِّئ ctx ويُرجع دالة رسم تتعامل
+//    مع التأثيرات التي تحتاج عدة fillText/strokeText
 function setTextFx(ctx, eff, txtCol, shdCol) {
-  ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+  ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
+  ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
   const [sr, sg, sb] = hex2rgb(shdCol);
-  const fx = {
-    none: () => { ctx.shadowColor = `rgba(${sr},${sg},${sb},.7)`; ctx.shadowBlur = 12; },
-    glow: () => { ctx.shadowColor = "#f0c842"; ctx.shadowBlur = 28; },
-    neon: () => { ctx.shadowColor = "#00ff88"; ctx.shadowBlur = 22; },
-    shadow3d: () => { ctx.shadowColor = `rgba(0,0,0,.85)`; ctx.shadowBlur = 0; ctx.shadowOffsetX = 4; ctx.shadowOffsetY = 5; },
-    emboss: () => { ctx.shadowColor = "rgba(255,255,255,.25)"; ctx.shadowBlur = 0; ctx.shadowOffsetX = -2; ctx.shadowOffsetY = -2; },
-    outline: () => { ctx.shadowColor = "rgba(0,0,0,.9)"; ctx.shadowBlur = 0; ctx.lineWidth = 2; },
-  };
-  (fx[eff] || fx.none)();
+  const simple = (x, y, text) => ctx.fillText(text, x, y);
+
+  switch (eff) {
+    case "glow":
+      ctx.shadowColor = "#f0c842"; ctx.shadowBlur = 28;
+      return simple;
+    case "neon":
+      ctx.shadowColor = "#00ff88"; ctx.shadowBlur = 22;
+      return (x, y, text) => { ctx.fillText(text, x, y); ctx.fillText(text, x, y); };
+    case "outline":
+      return (x, y, text) => {
+        const fontSize = parseInt(ctx.font) || 40;
+        ctx.save();
+        ctx.lineJoin = "round"; ctx.miterLimit = 2;
+        ctx.strokeStyle = shdCol || "#000";
+        ctx.lineWidth = Math.max(3, fontSize * 0.08);
+        ctx.strokeText(text, x, y);
+        ctx.restore();
+        ctx.fillText(text, x, y);
+      };
+    case "shadow3d":
+      return (x, y, text) => {
+        const fontSize = parseInt(ctx.font) || 40;
+        const layers = 10;
+        const maxOff = Math.max(3, fontSize * 0.09);
+        const oldFill = ctx.fillStyle;
+        for (let i = layers; i >= 1; i--) {
+          const p = i / layers;
+          const off = maxOff * p;
+          ctx.fillStyle = `rgba(${sr},${sg},${sb},${0.55 * p})`;
+          ctx.fillText(text, x + off, y + off);
+        }
+        ctx.fillStyle = oldFill;
+        ctx.fillText(text, x, y);
+      };
+    case "emboss":
+      return (x, y, text) => {
+        const oldFill = ctx.fillStyle;
+        ctx.fillStyle = "rgba(255,255,255,0.55)";
+        ctx.fillText(text, x - 1.5, y - 1.5);
+        ctx.fillStyle = "rgba(0,0,0,0.65)";
+        ctx.fillText(text, x + 1.5, y + 1.5);
+        ctx.fillStyle = oldFill;
+        ctx.fillText(text, x, y);
+      };
+    case "carved":
+      return (x, y, text) => {
+        const oldFill = ctx.fillStyle;
+        ctx.fillStyle = "rgba(0,0,0,0.7)";
+        ctx.fillText(text, x - 1.5, y - 1.5);
+        ctx.fillStyle = "rgba(255,255,255,0.5)";
+        ctx.fillText(text, x + 1.5, y + 1.5);
+        ctx.fillStyle = oldFill;
+        ctx.globalCompositeOperation = "multiply";
+        ctx.fillText(text, x, y);
+        ctx.globalCompositeOperation = "source-over";
+      };
+    case "gold":
+      return (x, y, text) => {
+        const fontSize = parseInt(ctx.font) || 40;
+        const grad = ctx.createLinearGradient(x, y - fontSize, x, y + fontSize * 0.2);
+        grad.addColorStop(0,    "#fff5b0");
+        grad.addColorStop(0.3,  "#f0c842");
+        grad.addColorStop(0.55, "#b8860b");
+        grad.addColorStop(0.8,  "#f0c842");
+        grad.addColorStop(1,    "#fff5b0");
+        const oldFill = ctx.fillStyle;
+        ctx.shadowColor = "rgba(0,0,0,.6)"; ctx.shadowBlur = 6;
+        ctx.fillStyle = grad;
+        ctx.fillText(text, x, y);
+        ctx.fillStyle = oldFill;
+        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
+      };
+    case "fire":
+      return (x, y, text) => {
+        const fontSize = parseInt(ctx.font) || 40;
+        const grad = ctx.createLinearGradient(x, y + fontSize * 0.3, x, y - fontSize);
+        grad.addColorStop(0,   "#7a0000");
+        grad.addColorStop(0.3, "#e63b00");
+        grad.addColorStop(0.7, "#ffb700");
+        grad.addColorStop(1,   "#fff5b0");
+        const oldFill = ctx.fillStyle;
+        ctx.shadowColor = "rgba(230,59,0,.7)"; ctx.shadowBlur = 18;
+        ctx.fillStyle = grad;
+        ctx.fillText(text, x, y);
+        ctx.fillStyle = oldFill;
+        ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
+      };
+    case "soft":
+      ctx.shadowColor = `rgba(${sr},${sg},${sb},.5)`; ctx.shadowBlur = 16;
+      return simple;
+    case "none":
+    default:
+      ctx.shadowColor = `rgba(${sr},${sg},${sb},.7)`; ctx.shadowBlur = 12;
+      return simple;
+  }
 }
 
 function wrapText(ctx, text, maxW, fsz, font) {
@@ -828,6 +1667,11 @@ function wrapText(ctx, text, maxW, fsz, font) {
 //  WAVEFORM
 // ══════════════════════════════════════════════════════
 function getWaveData(ts) {
+  // أثناء تصدير V2: استخدم بيانات FFT المُحسوبة مسبقاً من mixed buffer
+  if (S._exportWaveData) {
+    S.waveData = S._exportWaveData;
+    return;
+  }
   if (S.analyser) {
     const full = new Uint8Array(S.analyser.frequencyBinCount);
     S.analyser.getByteFrequencyData(full);
@@ -871,7 +1715,8 @@ function drawWave(ctx, W, H, ts) {
   const shape = radioVal("ws");
   const col = $("wave-col").value;
   const pos = $("wave-pos").value;
-  const wh = parseInt(gv("wave-h"));
+  const gain = (parseInt(gv("wave-gain")) || 100) / 100;
+  const wh = parseInt(gv("wave-h")) * gain;
   const n = S.waveData.length;
   const [cr, cg, cb] = hex2rgb(col);
 
@@ -983,6 +1828,68 @@ function drawWave(ctx, W, H, ts) {
         ctx.fillRect(i * bw, yTop, bw * 0.82, 2);
       }
     }
+  } else if (shape === "rays") {
+    const cx = W / 2;
+    const cy = (pos === "top") ? 4 + wh : H - 4;
+    ctx.lineWidth = 2; ctx.lineCap = "round";
+    const halfArc = Math.PI * 0.85;
+    const startAngle = (pos === "top") ? (Math.PI / 2 - halfArc / 2) : (-Math.PI / 2 - halfArc / 2);
+    for (let i = 0; i < n; i++) {
+      const amp = (S.waveData[i] / 255) * wh;
+      const alpha = 0.4 + 0.55 * (S.waveData[i] / 255);
+      const a = startAngle + (i / (n - 1)) * halfArc;
+      ctx.strokeStyle = `rgba(${cr},${cg},${cb},${alpha})`;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(a) * amp, cy + Math.sin(a) * amp);
+      ctx.stroke();
+    }
+  } else if (shape === "triangles") {
+    const bw = W / n;
+    for (let i = 0; i < n; i++) {
+      const bh = (S.waveData[i] / 255) * wh;
+      if (bh < 1) continue;
+      const alpha = 0.45 + 0.5 * (S.waveData[i] / 255);
+      ctx.fillStyle = `rgba(${cr},${cg},${cb},${alpha})`;
+      const cxBar = i * bw + bw * 0.5;
+      const yTip = BASE + SIGN * bh;
+      ctx.beginPath();
+      ctx.moveTo(cxBar - bw * 0.4, BASE);
+      ctx.lineTo(cxBar + bw * 0.4, BASE);
+      ctx.lineTo(cxBar, yTip);
+      ctx.closePath(); ctx.fill();
+    }
+  } else if (shape === "rings") {
+    const cx = W / 2, cy = H / 2;
+    const baseR = Math.min(W, H) * 0.06;
+    const numRings = Math.min(n, 12);
+    for (let r = 0; r < numRings; r++) {
+      const idx = Math.floor((r / numRings) * n);
+      const amp = (S.waveData[idx] / 255) * wh * 0.6;
+      const radius = baseR + r * (Math.min(W, H) * 0.025) + amp;
+      const alpha = (0.4 + 0.5 * (S.waveData[idx] / 255)) * (1 - r / numRings);
+      ctx.strokeStyle = `rgba(${cr},${cg},${cb},${alpha})`;
+      ctx.lineWidth = 1.5 + 1.5 * (S.waveData[idx] / 255);
+      ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.stroke();
+    }
+  } else if (shape === "mountains") {
+    ctx.fillStyle = `rgba(${cr},${cg},${cb},0.18)`;
+    ctx.strokeStyle = `rgba(${cr},${cg},${cb},0.9)`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, BASE);
+    const step = W / (n - 1);
+    for (let i = 0; i < n - 1; i++) {
+      const bh = (S.waveData[i] / 255) * wh;
+      const nb = (S.waveData[i + 1] / 255) * wh;
+      const x = i * step, y = BASE + SIGN * bh;
+      const xN = (i + 1) * step, yN = BASE + SIGN * nb;
+      const cpX = (x + xN) / 2;
+      ctx.quadraticCurveTo(cpX, y, xN, yN);
+    }
+    ctx.lineTo(W, BASE);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
   }
 
   ctx.restore();
@@ -1041,11 +1948,18 @@ async function playRecitationAudio() {
 
   const onEnded = () => {
     if (!S.playing || myGen !== _recGen) return;
-    if (S.currentAya < S.verses.length - 1) {
-      S.currentAya++; S.elapsed = 0; playRecitationAudio(); updateAyaUI();
-    } else {
-      pausePlayer(); S.currentAya = 0; S.elapsed = 0; updateAyaUI();
-    }
+    // الانتظار حسب فاصل الصمت قبل الانتقال للآية التالية
+    const gap = getAyaGap();
+    const advance = () => {
+      if (!S.playing || myGen !== _recGen) return;
+      if (S.currentAya < S.verses.length - 1) {
+        S.currentAya++; S.elapsed = 0; playRecitationAudio(); updateAyaUI();
+      } else {
+        pausePlayer(); S.currentAya = 0; S.elapsed = 0; updateAyaUI();
+      }
+    };
+    if (gap > 0) setTimeout(advance, gap * 1000);
+    else advance();
   };
 
   try {
@@ -1112,6 +2026,56 @@ function stopRecitationAudio() {
   }
 }
 
+// ── تقطيع نطاق زمني للوسائط المحلية ───────────────────
+function getBgVidTrim() {
+  if (!ge("bg-vid-trim-on") || !S.bgVid) return null;
+  const s = Math.max(0, parseFloat(gv("bg-vid-trim-start")) || 0);
+  const e = Math.max(s + 0.1, parseFloat(gv("bg-vid-trim-end")) || s + 1);
+  const dur = S.bgVid.duration;
+  return { start: s, end: isFinite(dur) ? Math.min(e, dur) : e };
+}
+function getBgAudioTrim() {
+  if (!ge("bg-audio-trim-on") || !S.bgAudioEl) return null;
+  const s = Math.max(0, parseFloat(gv("bg-audio-trim-start")) || 0);
+  const e = Math.max(s + 0.1, parseFloat(gv("bg-audio-trim-end")) || s + 1);
+  const dur = S.bgAudioEl.duration;
+  return { start: s, end: isFinite(dur) ? Math.min(e, dur) : e };
+}
+function applyBgVidTrim() {
+  const t = getBgVidTrim();
+  if (!t || !S.bgVid) return;
+  if (S.bgVid.currentTime < t.start || S.bgVid.currentTime > t.end) {
+    try { S.bgVid.currentTime = t.start; } catch (_) {}
+  }
+  if (!S.bgVid._trimHandler) {
+    S.bgVid._trimHandler = () => {
+      const tt = getBgVidTrim();
+      if (!tt) return;
+      if (S.bgVid.currentTime >= tt.end - 0.05) {
+        try { S.bgVid.currentTime = tt.start; } catch (_) {}
+      }
+    };
+    S.bgVid.addEventListener("timeupdate", S.bgVid._trimHandler);
+  }
+}
+function applyBgAudioTrim() {
+  const t = getBgAudioTrim();
+  if (!t || !S.bgAudioEl) return;
+  if (S.bgAudioEl.currentTime < t.start || S.bgAudioEl.currentTime > t.end) {
+    try { S.bgAudioEl.currentTime = t.start; } catch (_) {}
+  }
+  if (!S.bgAudioEl._trimHandler) {
+    S.bgAudioEl._trimHandler = () => {
+      const tt = getBgAudioTrim();
+      if (!tt) return;
+      if (S.bgAudioEl.currentTime >= tt.end - 0.05) {
+        try { S.bgAudioEl.currentTime = tt.start; } catch (_) {}
+      }
+    };
+    S.bgAudioEl.addEventListener("timeupdate", S.bgAudioEl._trimHandler);
+  }
+}
+
 function onBgAudio(input) {
   const file = input.files[0];
   if (!file) return;
@@ -1146,9 +2110,9 @@ function updateVolumes() {
 //  MEDIA BACKGROUNDS
 // ══════════════════════════════════════════════════════
 function onBgMedia(input, type) {
-  const file = input.files[0]; if (!file) return;
-  const url = URL.createObjectURL(file);
   if (type === "image") {
+    const file = input.files[0]; if (!file) return;
+    const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => { S.bgImg = img; toast("🖼️ تم تحميل الصورة", "success"); };
     img.onerror = () => toast("❌ فشل تحميل الصورة", "error");
@@ -1157,20 +2121,222 @@ function onBgMedia(input, type) {
     $("bg-img-preview").src = url;
     thumb.style.display = "block";
   } else {
-    const vid = document.createElement("video");
-    vid.src = url; vid.loop = true; vid.muted = true; vid.playsInline = true;
-    vid.onloadeddata = () => {
-      S.bgVid = vid;
-      vid.play().catch(() => { });
-      toast("🎥 تم تحميل الفيديو", "success");
-    };
-    vid.onerror = () => toast("❌ فشل تحميل الفيديو", "error");
-    const thumb = $("bg-vid-thumb");
-    $("bg-vid-preview").src = url;
-    $("bg-vid-info").textContent = `${file.name} (${(file.size / 1e6).toFixed(1)}MB)`;
-    thumb.style.display = "block";
-    $("bg-vid-preview").src = url;
+    // رفع متعدد للفيديو
+    const files = Array.from(input.files || []);
+    if (!files.length) return;
+    files.forEach(f => addBgVidItem(f));
+    input.value = "";
   }
+}
+
+// ── إدارة قائمة مقاطع الخلفية (playlist) — مطابق لنسخة المكتبية ──
+function addBgVidItem(file) {
+  const url = URL.createObjectURL(file);
+  const vid = document.createElement("video");
+  vid.src = url; vid.muted = true; vid.playsInline = true; vid.preload = "auto";
+  vid.addEventListener("ended", () => switchToNextBgVid());
+  vid.onloadeddata = () => {
+    const item = {
+      file, vid, name: file.name,
+      dur: isFinite(vid.duration) ? vid.duration : 0,
+      url,
+      audioEnabled: false,   // الصوت معطّل افتراضياً
+      audioGain: 0.5,        // 50%
+      audioBuffer: null,     // يُفكّ ترميزه عند تفعيل الصوت (lazy)
+    };
+    S.bgVidItems.push(item);
+    if (!S.bgVid) {
+      S.bgVid = vid;
+      S.bgVidActiveIdx = S.bgVidItems.length - 1;
+      const thumb = $("bg-vid-thumb"); if (thumb) thumb.style.display = "block";
+      const prev = $("bg-vid-preview"); if (prev) prev.src = url;
+      // الفيديو يبقى متوقفاً عند الرفع — يُشغَّل فقط مع ضغط ▶️
+      // (متناغم مع play/pause/next/prev للآيات)
+      try { vid.pause(); vid.currentTime = 0; } catch (_) {}
+    }
+    renderBgVidList();
+    if (S.bgVidItems.length === 1) {
+      toast("🎥 تم رفع المقطع — يمكن إضافة المزيد لتتابع الخلفيات", "success", 3500);
+    } else {
+      toast(`🎥 أُضيف المقطع (${S.bgVidItems.length} مجموع)`, "success", 2000);
+    }
+  };
+  vid.onerror = () => toast(`❌ فشل تحميل ${file.name}`, "error");
+  vid.load();
+}
+
+function switchToNextBgVid() {
+  if (S.bgVidItems.length < 2) {
+    if (S.bgVid) { try { S.bgVid.currentTime = 0; S.bgVid.play().catch(() => {}); } catch (_) {} }
+    return;
+  }
+  const nextIdx = (S.bgVidActiveIdx + 1) % S.bgVidItems.length;
+  // مهم: لا تُعِد currentTime — التالي يلعب فعلاً منذ crossfade
+  // (إعادته كانت تسبّب rewind مرئياً بقدر مدة الـ crossfade)
+  const active = S.bgVidItems[nextIdx];
+  S.bgVidActiveIdx = nextIdx;
+  S.bgVid = active.vid;
+  S.bgVidNext = null;
+  S.bgVidFadeProgress = 0;
+  // ضمان استمرار التشغيل إن كان توقّف لسبب ما
+  if (S.playing || S._exportingV2) {
+    try { active.vid.play().catch(() => {}); } catch (_) {}
+  }
+}
+
+// ── Crossfade سلس قبل انتهاء المقطع — مدة قابلة للضبط + easing ──
+function getCrossfadeDur() {
+  const ms = parseInt(gv("bg-crossfade-ms") || "1000");
+  return Math.max(0, ms) / 1000;
+}
+function easeInOutCubic(t) {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+function updateBgVidCrossfade() {
+  if (!S.bgVid || S.bgVidItems.length < 2) {
+    S.bgVidNext = null; S.bgVidFadeProgress = 0; return;
+  }
+  const cur = S.bgVid;
+  if (!isFinite(cur.duration) || cur.duration <= 0) return;
+
+  const xf = getCrossfadeDur();
+  if (xf <= 0) { S.bgVidNext = null; S.bgVidFadeProgress = 0; return; }
+
+  const trim = (typeof getBgVidTrim === "function") ? getBgVidTrim() : null;
+  const endPoint = trim ? trim.end : cur.duration;
+  const remaining = endPoint - cur.currentTime;
+
+  if (remaining <= xf && remaining > 0) {
+    const nextIdx = (S.bgVidActiveIdx + 1) % S.bgVidItems.length;
+    const nextItem = S.bgVidItems[nextIdx];
+    if (S.bgVidNext !== nextItem.vid) {
+      S.bgVidNext = nextItem.vid;
+      try { nextItem.vid.currentTime = 0; nextItem.vid.play().catch(() => {}); } catch (_) {}
+    }
+    const linear = Math.max(0, Math.min(1, 1 - (remaining / xf)));
+    S.bgVidFadeProgress = easeInOutCubic(linear);
+  } else {
+    S.bgVidNext = null;
+    S.bgVidFadeProgress = 0;
+  }
+}
+
+function activateBgVidByIndex(idx, resetTime = true) {
+  if (!S.bgVidItems.length) {
+    S.bgVid = null; S.bgVidActiveIdx = 0;
+    const prev = $("bg-vid-preview"); if (prev) prev.src = "";
+    return;
+  }
+  idx = Math.max(0, Math.min(idx, S.bgVidItems.length - 1));
+  if (S.bgVid) { try { S.bgVid.pause(); } catch (_) {} }
+  const item = S.bgVidItems[idx];
+  S.bgVidActiveIdx = idx;
+  S.bgVid          = item.vid;
+  const prev = $("bg-vid-preview");
+  if (prev) prev.src = item.url;
+  if (resetTime) {
+    try {
+      const t = (typeof getBgVidTrim === "function") ? getBgVidTrim() : null;
+      item.vid.currentTime = t ? t.start : 0;
+    } catch (_) {}
+  }
+  if (S.playing) { try { item.vid.play().catch(() => {}); } catch (_) {} }
+}
+
+function removeBgVidItem(idx) {
+  if (idx < 0 || idx >= S.bgVidItems.length) return;
+  const item = S.bgVidItems[idx];
+  try { item.vid.pause(); URL.revokeObjectURL(item.url); } catch (_) {}
+  S.bgVidItems.splice(idx, 1);
+  if (S.bgVidItems.length === 0) {
+    S.bgVid = null;
+    const thumb = $("bg-vid-thumb"); if (thumb) thumb.style.display = "none";
+    const prev = $("bg-vid-preview"); if (prev) prev.src = "";
+  } else {
+    activateBgVidByIndex(0, true);
+  }
+  renderBgVidList();
+}
+
+function moveBgVidItem(idx, dir) {
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= S.bgVidItems.length) return;
+  const [moved] = S.bgVidItems.splice(idx, 1);
+  S.bgVidItems.splice(newIdx, 0, moved);
+  activateBgVidByIndex(0, true);  // التأثير فوري: ابدأ من الأول دائماً بعد الترتيب
+  renderBgVidList();
+}
+
+// تطبيق إعدادات صوت العنصر على عنصر الفيديو
+function applyBgVidItemAudio(item) {
+  if (!item || !item.vid) return;
+  item.vid.muted = !item.audioEnabled;
+  item.vid.volume = Math.max(0, Math.min(1, item.audioGain));
+}
+
+// تفعيل/تعطيل صوت عنصر معين + فكّ ترميز buffer للاستخدام في V2
+async function toggleBgVidAudio(idx) {
+  const item = S.bgVidItems[idx];
+  if (!item) return;
+  item.audioEnabled = !item.audioEnabled;
+  applyBgVidItemAudio(item);
+  // فكّ ترميز buffer عند أول تفعيل (lazy) — يستخدم في تصدير V2
+  if (item.audioEnabled && !item.audioBuffer) {
+    try {
+      const ctx = await resumeAudioCtx();
+      const ab = await item.file.arrayBuffer();
+      item.audioBuffer = await ctx.decodeAudioData(ab.slice(0));
+    } catch (e) {
+      console.warn("decode bg-vid audio failed:", e);
+      toast("⚠️ تعذّر فكّ صوت المقطع — سيعمل في المعاينة فقط", "info", 3500);
+    }
+  }
+  renderBgVidList();
+}
+
+function setBgVidVolume(idx, value) {
+  const item = S.bgVidItems[idx];
+  if (!item) return;
+  item.audioGain = Math.max(0, Math.min(1, value / 100));
+  applyBgVidItemAudio(item);
+}
+
+function renderBgVidList() {
+  const el = $("bg-vid-list");
+  if (!el) return;
+  if (!S.bgVidItems.length) { el.innerHTML = ""; return; }
+  el.innerHTML = S.bgVidItems.map((it, i) => {
+    const sz = (it.file.size / 1e6).toFixed(1);
+    const dur = it.dur ? it.dur.toFixed(1) + "ث" : "—";
+    const audioOn = it.audioEnabled;
+    const volPct = Math.round((it.audioGain || 0) * 100);
+    return `<div class="bgv-item" data-idx="${i}">
+      <span class="bgv-idx">${i + 1}</span>
+      <span class="bgv-name" title="${escHtml(it.name)}">${escHtml(it.name)}</span>
+      <span class="bgv-dur">${dur} · ${sz}MB</span>
+      <button data-act="audio" class="${audioOn ? 'on' : ''}" title="${audioOn ? 'كتم صوت المقطع' : 'تفعيل صوت المقطع'}">${audioOn ? '🔊' : '🔇'}</button>
+      <input type="range" class="bgv-vol" min="0" max="100" value="${volPct}" data-act="vol" title="مستوى صوت المقطع: ${volPct}%" ${audioOn ? '' : 'style="visibility:hidden"'}>
+      <button data-act="up"     ${i === 0 ? "disabled" : ""} title="أعلى">▲</button>
+      <button data-act="down"   ${i === S.bgVidItems.length - 1 ? "disabled" : ""} title="أسفل">▼</button>
+      <button data-act="remove" title="إزالة">✕</button>
+    </div>`;
+  }).join("");
+  el.querySelectorAll(".bgv-item button").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      const idx = parseInt(e.currentTarget.closest(".bgv-item").dataset.idx);
+      const act = e.currentTarget.dataset.act;
+      if (act === "up")          moveBgVidItem(idx, -1);
+      else if (act === "down")   moveBgVidItem(idx, +1);
+      else if (act === "remove") removeBgVidItem(idx);
+      else if (act === "audio")  toggleBgVidAudio(idx);
+    });
+  });
+  el.querySelectorAll(".bgv-item input.bgv-vol").forEach(inp => {
+    inp.addEventListener("input", (e) => {
+      const idx = parseInt(e.currentTarget.closest(".bgv-item").dataset.idx);
+      setBgVidVolume(idx, parseFloat(e.currentTarget.value));
+    });
+  });
 }
 
 function onBgTypeChange() {
@@ -1193,6 +2359,8 @@ function startPlayer() {
   $("btn-play").textContent = "⏸️";
   resumeAudioCtx().catch(console.warn);
   if (S.bgAudioEl) { S.bgAudioEl.loop = ge("bg-loop"); S.bgAudioEl.play().catch(() => { }); }
+  // شغّل فيديو الخلفية مع المشغّل (متناغم مع play/pause)
+  if (S.bgVid) { try { S.bgVid.play().catch(() => {}); } catch (_) {} }
   playRecitationAudio();
 }
 
@@ -1201,6 +2369,8 @@ function pausePlayer() {
   $("btn-play").textContent = "▶️";
   stopRecitationAudio();
   if (S.bgAudioEl) S.bgAudioEl.pause();
+  // أوقف فيديو الخلفية مع الإيقاف
+  if (S.bgVid) { try { S.bgVid.pause(); } catch (_) {} }
 }
 
 function prevAya() { if (S.currentAya > 0) { S.currentAya--; S.elapsed = 0; updateAyaUI(); if (S.playing) playRecitationAudio(); } }
@@ -1241,6 +2411,7 @@ async function startExport(type) {
   S.exportCancel = false;
   S.exportChunks = [];
   S.exporting = true;
+  initExportMuteState();  // طبّق إعداد كتم التصدير قبل بدء الترميز
   stopRecitationAudio();
   if (S.bgAudioEl) S.bgAudioEl.pause();
 
@@ -1311,11 +2482,12 @@ async function startExport(type) {
 
   audioBuffers.forEach((buf, i) => { if (buf) S.ayaDurations[i] = buf.duration; });
 
+  const ayaGap = getAyaGap();
   const ayaStarts = [];
   let acc = 0;
   for (let i = 0; i < S.verses.length; i++) {
     ayaStarts.push(acc);
-    acc += getDur(i);
+    acc += getDur(i) + ayaGap;
   }
   const totalDuration = acc;
   const FPS = parseInt(gv("export-fps") || "30") || 30;
@@ -1323,6 +2495,97 @@ async function startExport(type) {
   const totalFrames = Math.ceil(totalDuration * FPS);
 
   const cv = $("cv");
+
+  // ═══════════════════════════════════════════════════
+  //  V2: المسار الحتمي عبر WebCodecs (إن كان مدعوماً)
+  //  لا تقطّع، لا انجراف زمني — مكافئ للنسخة المكتبية
+  // ═══════════════════════════════════════════════════
+  let v2Completed = false;  // علم صارم: إن صار true → ممنوع MediaRecorder
+  if (typeof startWebExportV2 === "function" && typeof isWebCodecsSupported === "function" && isWebCodecsSupported()) {
+    try {
+      $("rec-sub").textContent = "🚀 محرّك حتمي V2 (WebCodecs)…";
+      // فكّ ترميز صوت الخلفية لخلطه في OfflineAudioContext
+      let bgBuffer = null;
+      if (S.bgAudioEl && S.bgAudioEl.src) {
+        try {
+          const r = await fetch(S.bgAudioEl.src);
+          const ab = await r.arrayBuffer();
+          bgBuffer = await ctx.decodeAudioData(ab.slice(0));
+        } catch (e) { console.warn("bg audio decode failed:", e); }
+      }
+      const cancelRef = { canceled: false };
+      S.exportCancelRef = cancelRef;
+
+      // setStateForTime: يضبط الآية + المنقضي + bgMotionT لإطار معيّن
+      const getAyaAt = (t) => {
+        for (let i = 0; i < S.verses.length; i++) {
+          if (t < ayaStarts[i] + getDur(i) + ayaGap) return i;
+        }
+        return S.verses.length - 1;
+      };
+      const setStateForTime = (t) => {
+        const idx = getAyaAt(Math.min(t, totalDuration - 1e-4));
+        S.currentAya = idx;
+        S.elapsed    = Math.max(0, t - ayaStarts[idx]);
+        S.bgMotionT  = t;
+      };
+
+      await window.startWebExportV2({
+        canvas: cv,
+        drawFrame,
+        setStateForTime,
+        totalDuration,
+        fps: FPS,
+        audioBuffers,
+        ayaStarts,
+        bgBuffer,
+        bgGain: (gv("bg-vol") || 0) / 100,
+        bgLoop: ge("bg-loop"),
+        recGain: gainVal,
+        bgVideo: S.bgVid,
+        codecKey: (type === "mp4" ? "mp4-h264" : "webm-vp9"),
+        videoBitrate: parseInt(gv("export-vbr") || "8") || 8,
+        audioBitrate: "192k",
+        cancelRef,
+        onProgress: (pct, label) => {
+          const cp = Math.max(0, Math.min(100, Math.round(pct)));
+          $("rec-fill").style.width = cp + "%";
+          $("rec-pct").textContent  = cp + "%";
+          if (label) $("rec-sub").textContent = label;
+        },
+      });
+      v2Completed = true;  // ⚠️ مهم: V2 أنتج الملف بنجاح
+      toast("✅ تم التصدير بنجاح! (محرّك V2 حتمي)", "success");
+    } catch (e) {
+      if (e && e.message === "cancelled") {
+        toast("تم إلغاء التصدير", "info");
+        v2Completed = true;  // المستخدم ألغى عمداً — لا fallback
+      } else {
+        console.warn("V2 export failed, falling back to MediaRecorder:", e);
+        toast("⚠️ V2 فشل: " + String(e.message).slice(0, 80) + " — جاري المحاولة بالطريقة القديمة", "info", 4000);
+      }
+    } finally {
+      S.exportCancelRef = null;
+    }
+    // تنظيف صارم بعد V2 — في كل الأحوال (نجاح/إلغاء)
+    if (v2Completed) {
+      $("rec-ov").classList.remove("on");
+      if (typeof cleanupExportMute === "function") cleanupExportMute();
+      stopRecitationAudio();
+      if (S.bgAudioEl) { try { S.bgAudioEl.pause(); S.bgAudioEl.currentTime = 0; } catch (_) {} }
+      if (S.bgVid)     { try { S.bgVid.pause(); S.bgVid.currentTime = 0; } catch (_) {} }
+      S.exporting = false;
+      S.playing   = false;
+      if (typeof updateAyaUI === "function") updateAyaUI();
+      return;  // ⛔ لا MediaRecorder
+    }
+  }
+
+  // ═══════════════════════════════════════════════════
+  //  المسار القديم (MediaRecorder) — fallback فقط إن V2
+  //  لم يُنتج ملفاً وفشل بأخطاء غير "cancelled"
+  // ═══════════════════════════════════════════════════
+  if (v2Completed) return;  // belt-and-suspenders
   const stream = cv.captureStream(FPS);
   const tracks = [...stream.getTracks()];
   if (S.exportDest && S.exportDest.stream.getAudioTracks().length)
@@ -1409,7 +2672,7 @@ async function startExport(type) {
   const getAyaAt = (t) => {
     let idx = S.verses.length - 1;
     for (let i = 0; i < S.verses.length; i++) {
-      if (t < ayaStarts[i] + getDur(i)) { idx = i; break; }
+      if (t < ayaStarts[i] + getDur(i) + ayaGap) { idx = i; break; }
     }
     return idx;
   };
@@ -1486,6 +2749,9 @@ function stopExportSources() {
 function cancelExport() {
   S.exportCancel = true;
   S.exporting = false;
+  // محرك V2 للويب (WebCodecs)
+  if (S.exportCancelRef) S.exportCancelRef.canceled = true;
+  // المسار القديم (MediaRecorder)
   stopExportSources();
   stopRecitationAudio();
   if (S.bgAudioEl) { S.bgAudioEl.pause(); S.bgAudioEl.currentTime = 0; }
@@ -1497,21 +2763,49 @@ function cancelExport() {
 }
 
 // ══════════════════════════════════════════════════════
-//  QURAN DATA
+//  QURAN DATA  (مع تخزين محلي دائم للعمل دون اتصال)
 // ══════════════════════════════════════════════════════
+//   - قائمة السور:   localStorage["gt_sqr_surahs_v1"]    (دائمة)
+//   - نص القرآن:     localStorage["gt_sqr_quran_idx_v1"] (يُحمَّل في الخلفية)
+//   - الترجمات:      localStorage["gt_sqr_trans_{ed}_{n}"] (بالطلب)
+const SURAHS_KEY = "gt_sqr_surahs_v1";
+
 async function loadSurahList() {
   const sel = $("surah-sel");
-  sel.innerHTML = `<option>⏳ جاري التحميل…</option>`;
+  // 1) جرّب localStorage الدائم
+  let surahs = null;
   try {
-    let surahs = JSON.parse(sessionStorage.getItem("gt_surahs") || "null");
-    if (!surahs) {
-      const r = await fetch(`${QURAN_API}/surah`);
-      const d = await r.json();
-      surahs = d.data;
-      sessionStorage.setItem("gt_surahs", JSON.stringify(surahs));
-    }
+    const cached = JSON.parse(localStorage.getItem(SURAHS_KEY) || "null");
+    if (Array.isArray(cached) && cached.length === 114) surahs = cached;
+  } catch (_) {}
+  // 2) جرّب sessionStorage (احتياط من نسخة قديمة)
+  if (!surahs) {
+    try {
+      const old = JSON.parse(sessionStorage.getItem("gt_surahs") || "null");
+      if (Array.isArray(old) && old.length === 114) {
+        surahs = old;
+        try { localStorage.setItem(SURAHS_KEY, JSON.stringify(surahs)); } catch (_) {}
+      }
+    } catch (_) {}
+  }
+
+  if (surahs) {
     S.surahs = surahs;
     S.filteredSurahs = surahs;
+    renderSurahList(surahs);
+    await loadVerses();
+    return;
+  }
+
+  // 3) لا يوجد كاش — حمّل من الـ API
+  sel.innerHTML = `<option>⏳ جاري التحميل…</option>`;
+  try {
+    const r = await fetch(`${QURAN_API}/surah`);
+    const d = await r.json();
+    surahs = d.data;
+    S.surahs = surahs;
+    S.filteredSurahs = surahs;
+    try { localStorage.setItem(SURAHS_KEY, JSON.stringify(surahs)); } catch (_) {}
     renderSurahList(surahs);
     await loadVerses();
   } catch (e) {
@@ -1527,15 +2821,20 @@ function renderSurahList(surahs) {
 
 function filterSurahs(query) {
   if (!S.surahs) return;
-  const q = query.trim().toLowerCase();
-  if (!q) {
+  const raw = (query || "").trim();
+  if (!raw) {
     S.filteredSurahs = S.surahs;
   } else {
-    S.filteredSurahs = S.surahs.filter(s =>
-    s.name.includes(q) ||
-    s.englishName.toLowerCase().includes(q) ||
-    s.number.toString().includes(q)
-    );
+    // تطبيع المدخل والمقارنة على الأسماء العربية المطبَّعة كذلك
+    const nq = normalizeArabic(raw);
+    const lq = raw.toLowerCase();
+    S.filteredSurahs = S.surahs.filter(s => {
+      const arNorm = normalizeArabic(s.name || "");
+      const enLow  = (s.englishName || "").toLowerCase();
+      return arNorm.includes(nq)
+          || enLow.includes(lq)
+          || s.number.toString().includes(raw);
+    });
   }
   renderSurahList(S.filteredSurahs);
 }
@@ -1562,22 +2861,46 @@ async function loadVerses() {
   const surah = S.surahs.find(s => s.number === surahNum);
   if (surah) { const max = surah.numberOfAyahs; if (to > max) $("to-aya").value = max; }
   $("aya-info").textContent = "⏳ جاري تحميل الآيات…";
-  try {
-    const ck = `gt_v_${surahNum}_${from}_${to}`;
-    let verses = JSON.parse(sessionStorage.getItem(ck) || "null");
-    if (!verses) {
+
+  let verses = null;
+  let source = "";
+
+  // 1) جرّب فهرس القرآن المحلي الكامل (الأسرع — يعمل دون اتصال)
+  if (_quranIdx?.verses?.length) {
+    const matched = _quranIdx.verses
+      .filter(v => v.s === surahNum && v.a >= from && v.a <= to)
+      .map(v => ({ numberInSurah: v.a, text: v.t }));
+    if (matched.length) { verses = matched; source = "📚 محلي"; }
+  }
+
+  // 2) جرّب sessionStorage (كاش جلسة سابقة)
+  if (!verses) {
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(`gt_v_${surahNum}_${from}_${to}`) || "null");
+      if (Array.isArray(cached) && cached.length) { verses = cached; source = "🗂 جلسة"; }
+    } catch (_) {}
+  }
+
+  // 3) آخر حل: API الخارجي
+  if (!verses) {
+    try {
       const r = await fetch(`${QURAN_API}/surah/${surahNum}/quran-uthmani`);
       const d = await r.json();
-      verses = d.data.ayahs.filter(a => a.numberInSurah >= from && a.numberInSurah <= to);
-      sessionStorage.setItem(ck, JSON.stringify(verses));
+      verses = d.data.ayahs.filter(a => a.numberInSurah >= from && a.numberInSurah <= to)
+                            .map(a => ({ numberInSurah: a.numberInSurah, text: a.text }));
+      try { sessionStorage.setItem(`gt_v_${surahNum}_${from}_${to}`, JSON.stringify(verses)); } catch (_) {}
+      source = "🌐 شبكة";
+    } catch (e) {
+      $("aya-info").textContent = "⚠️ فشل التحميل (لا توجد بيانات محلية أو اتصال)";
+      if (!S.verses.length) loadOfflineFallback();
+      return;
     }
-    S.verses = verses; S.currentAya = 0; S.elapsed = 0; S.ayaDurations = [];
-    $("aya-info").textContent = `✅ ${verses.length} آية من سورة ${surah?.name || ""}`;
-    updateAyaUI();
-    await loadTranslations();
-  } catch (e) {
-    $("aya-info").textContent = "⚠️ فشل التحميل"; if (!S.verses.length) loadOfflineFallback();
   }
+
+  S.verses = verses; S.currentAya = 0; S.elapsed = 0; S.ayaDurations = [];
+  $("aya-info").textContent = `✅ ${verses.length} آية من سورة ${surah?.name || ""} ${source}`;
+  updateAyaUI();
+  await loadTranslations();
 }
 
 function onTransChange() {
@@ -1590,17 +2913,233 @@ async function loadTranslations() {
   const surahNum = parseInt($("surah-sel").value) || 1;
   const from = parseInt($("from-aya").value) || 1;
   const to = parseInt($("to-aya").value) || 7;
+  // كاش لكل (سورة، نسخة) في localStorage — يبقى بين الجلسات
+  const persistKey = `gt_sqr_trans_${edition}_${surahNum}`;
+  let allAyahs = null;
+
   try {
-    const ck = `gt_t_${surahNum}_${from}_${to}_${edition}`;
-    let trans = JSON.parse(sessionStorage.getItem(ck) || "null");
-    if (!trans) {
+    const cached = JSON.parse(localStorage.getItem(persistKey) || "null");
+    if (Array.isArray(cached) && cached.length) allAyahs = cached;
+  } catch (_) {}
+
+  if (!allAyahs) {
+    try {
       const r = await fetch(`${QURAN_API}/surah/${surahNum}/${edition}`);
       const d = await r.json();
-      trans = d.data.ayahs.filter(a => a.numberInSurah >= from && a.numberInSurah <= to).map(a => a.text);
-      sessionStorage.setItem(ck, JSON.stringify(trans));
+      allAyahs = d.data.ayahs.map(a => ({ n: a.numberInSurah, t: a.text }));
+      try { localStorage.setItem(persistKey, JSON.stringify(allAyahs)); } catch (_) {}
+    } catch (e) { S.translations = []; return; }
+  }
+
+  S.translations = allAyahs
+    .filter(a => a.n >= from && a.n <= to)
+    .map(a => a.t);
+}
+
+// ══════════════════════════════════════════════════════
+//  بحث الآيات مع تطبيع التشكيل (نسخة الويب)
+// ══════════════════════════════════════════════════════
+const QURAN_INDEX_KEY = "gt_sqr_quran_idx_v1";
+
+function normalizeArabic(s) {
+  if (!s) return "";
+  return s
+    .replace(/[ً-ْٰؐ-ؚۖ-ۭ]/g, "")
+    .replace(/[أإآٱا]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
+    .replace(/ـ/g, "")
+    .replace(/ء/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function normalizeWithMap(s) {
+  if (!s) return { norm: "", map: [] };
+  let out = "";
+  const map = [];
+  let lastSpace = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (/[ً-ْٰؐ-ؚۖ-ۭـء]/.test(c)) continue;
+    let r;
+    if (/[إأآٱا]/.test(c)) r = "ا";
+    else if (c === "ى") r = "ي";
+    else if (c === "ة") r = "ه";
+    else if (/\s/.test(c)) {
+      if (lastSpace) continue;
+      r = " ";
+    } else {
+      r = c.toLowerCase();
     }
-    S.translations = trans;
-  } catch (e) { S.translations = []; }
+    out += r;
+    map.push(i);
+    lastSpace = (r === " ");
+  }
+  return { norm: out, map };
+}
+
+let _quranIdx = null;
+let _quranIdxLoading = null;
+
+async function loadQuranIndex() {
+  if (_quranIdx) return _quranIdx;
+  if (_quranIdxLoading) return _quranIdxLoading;
+
+  _quranIdxLoading = (async () => {
+    try {
+      const cached = JSON.parse(localStorage.getItem(QURAN_INDEX_KEY) || "null");
+      if (cached && cached.v === 1 && Array.isArray(cached.verses) && cached.verses.length > 6000) {
+        _quranIdx = cached;
+        return cached;
+      }
+    } catch (_) {}
+
+    const r = await fetch(`${QURAN_API}/quran/quran-uthmani`);
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const d = await r.json();
+    const sd = d.data?.surahs || [];
+    const verses = [];
+    for (const s of sd) {
+      for (const a of s.ayahs) {
+        verses.push({
+          s:  s.number,
+          sn: s.name,
+          a:  a.numberInSurah,
+          t:  a.text,
+          n:  normalizeArabic(a.text),
+        });
+      }
+    }
+    const out = { v: 1, verses };
+    try { localStorage.setItem(QURAN_INDEX_KEY, JSON.stringify(out)); } catch (_) {}
+    _quranIdx = out;
+    return out;
+  })();
+
+  return _quranIdxLoading;
+}
+
+function preloadQuranIndex() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(QURAN_INDEX_KEY) || "null");
+    if (cached && cached.v === 1 && Array.isArray(cached.verses) && cached.verses.length > 6000) {
+      _quranIdx = cached;
+      console.log(`[Quran] Index ready from cache: ${cached.verses.length} verses`);
+      if (!S.verses.length) loadVerses();
+      return;
+    }
+  } catch (_) {}
+  loadQuranIndex()
+    .then(idx => {
+      console.log(`[Quran] Index downloaded: ${idx.verses.length} verses, cached for offline`);
+      toast("📚 تم تحميل القرآن كاملاً للعمل دون اتصال", "success", 3500);
+    })
+    .catch(err => console.warn("[Quran] Index preload failed:", err));
+}
+
+function searchVerses(query, limit = 80) {
+  if (!_quranIdx) return [];
+  const nq = normalizeArabic(query);
+  if (!nq) return [];
+  const out = [];
+  for (const v of _quranIdx.verses) {
+    const idx = v.n.indexOf(nq);
+    if (idx >= 0) {
+      out.push({ s: v.s, sn: v.sn, a: v.a, t: v.t, matchIdx: idx, matchLen: nq.length });
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
+}
+
+function highlightVerseMatch(text, matchIdx, matchLen) {
+  const { map } = normalizeWithMap(text);
+  if (matchIdx < 0 || matchIdx >= map.length) return escHtml(text);
+  const start = map[matchIdx];
+  const end   = matchIdx + matchLen - 1 < map.length ? (map[matchIdx + matchLen - 1] + 1) : text.length;
+  return escHtml(text.slice(0, start))
+       + "<mark>" + escHtml(text.slice(start, end)) + "</mark>"
+       + escHtml(text.slice(end));
+}
+
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[c]);
+}
+
+async function onVerseSearchInput(e) {
+  const q = e.target.value || "";
+  const resultsEl = $("verse-search-results");
+  const clearBtn  = $("verse-search-clear-btn");
+  if (clearBtn) clearBtn.style.display = q ? "" : "none";
+  if (!q.trim()) {
+    if (resultsEl) { resultsEl.style.display = "none"; resultsEl.innerHTML = ""; }
+    return;
+  }
+
+  if (!_quranIdx) {
+    resultsEl.style.display = "block";
+    resultsEl.innerHTML = `<div class="vs-loading">⏳ تحميل فهرس القرآن (مرّة واحدة فقط)…</div>`;
+    try {
+      await loadQuranIndex();
+    } catch (err) {
+      resultsEl.innerHTML = `<div class="vs-empty">❌ فشل تحميل الفهرس: ${escHtml(err.message)}</div>`;
+      return;
+    }
+  }
+
+  const results = searchVerses(q);
+  if (!results.length) {
+    resultsEl.style.display = "block";
+    resultsEl.innerHTML = `<div class="vs-empty">لا توجد نتائج تطابق "${escHtml(q)}"</div>`;
+    return;
+  }
+
+  resultsEl.style.display = "block";
+  resultsEl.innerHTML = results.map(r =>
+    `<div class="vs-item" data-s="${r.s}" data-a="${r.a}">
+       <div class="vs-head"><span>${escHtml(r.sn)} • آية ${r.a}</span><span>📖 ${r.s}:${r.a}</span></div>
+       <div class="vs-text">${highlightVerseMatch(r.t, r.matchIdx, r.matchLen)}</div>
+     </div>`
+  ).join("");
+
+  resultsEl.querySelectorAll(".vs-item").forEach(it => {
+    it.addEventListener("click", () => {
+      const s = parseInt(it.dataset.s);
+      const a = parseInt(it.dataset.a);
+      jumpToVerse(s, a);
+    });
+  });
+}
+
+async function jumpToVerse(surahNum, ayaNum) {
+  const sel = $("surah-sel");
+  if (sel) sel.value = surahNum;
+  const fromEl = $("from-aya"), toEl = $("to-aya");
+  if (fromEl) fromEl.value = ayaNum;
+  if (toEl) {
+    const cur = S.surahs.find(s => s.number === surahNum);
+    const max = cur?.numberOfAyahs || ayaNum;
+    toEl.value = Math.min(max, ayaNum + 2);
+  }
+  const resultsEl = $("verse-search-results");
+  if (resultsEl) { resultsEl.style.display = "none"; resultsEl.innerHTML = ""; }
+  const inp = $("verse-search-inp");
+  if (inp) inp.value = "";
+  const clr = $("verse-search-clear-btn");
+  if (clr) clr.style.display = "none";
+  await loadVerses();
+  toast(`📖 الانتقال إلى ${ayaNum}:${surahNum}`, "success", 1800);
+}
+
+function clearVerseSearch() {
+  const inp = $("verse-search-inp");
+  const resultsEl = $("verse-search-results");
+  const clr = $("verse-search-clear-btn");
+  if (inp) inp.value = "";
+  if (resultsEl) { resultsEl.style.display = "none"; resultsEl.innerHTML = ""; }
+  if (clr) clr.style.display = "none";
 }
 
 // ══════════════════════════════════════════════════════
@@ -1618,34 +3157,46 @@ function renderFontGrid() {
 
 async function loadLocalFonts(showToast = false) {
   try {
-    const r = await fetch("./fonts/fonts.json");
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    const list = await r.json();
+    // 1) جرّب window.FONTS_DATA (مُضمَّن في fonts-data.js — يعمل تحت file://)
+    let list = (Array.isArray(window.FONTS_DATA) ? window.FONTS_DATA : null);
+    // 2) fallback لـ fetch (للعمل عبر HTTP server)
+    if (!list) {
+      const r = await fetch("./fonts/fonts.json");
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      list = await r.json();
+    }
     if (!Array.isArray(list)) return;
     let added = 0;
+    let reloaded = 0;
     for (const item of list) {
       if (!item.name || !item.file) continue;
-      if (S.allFonts.find(x => x.name === item.name)) continue;
       try {
         let rawFile = item.file;
         try { rawFile = decodeURIComponent(rawFile); } catch(_) {}
         const fontUrl = `./fonts/${rawFile.split('/').map(encodeURIComponent).join('/')}`;
+        // حمّل FontFace دائماً — حتى لو الاسم في BUILT_IN_FONTS
+        // (كان dedup السابق يمنع تحميل ملف الخط الفعلي)
         const face = new FontFace(item.name, `url(${fontUrl})`);
         await face.load();
         document.fonts.add(face);
-        S.allFonts.push({
-          id: "local_" + item.name,
-          name: item.name,
-          css: `'${item.name}'`,
-          sample: item.sample || "بِسْمِ اللَّهِ"
-        });
-        added++;
+        if (!S.allFonts.find(x => x.name === item.name)) {
+          S.allFonts.push({
+            id: "local_" + item.name,
+            name: item.name,
+            css: `'${item.name}'`,
+            sample: item.sample || "بِسْمِ اللَّهِ"
+          });
+          added++;
+        } else {
+          reloaded++;
+        }
       } catch (e) {
         console.warn("Font load failed:", item.name, e);
       }
     }
     renderFontGrid();
-    if (showToast) toast(added > 0 ? `✅ تم تحميل ${added} خطوط محلية` : "لا توجد خطوط جديدة في fonts/", "info");
+    const total = added + reloaded;
+    if (showToast) toast(total > 0 ? `✅ ${added} خط جديد + ${reloaded} مُعاد ربطها` : "لا توجد خطوط في fonts/", "info");
   } catch (e) {
     console.warn("fonts.json error:", e);
     if (showToast) toast("📁 تأكد من وجود ملف fonts/fonts.json", "info");
