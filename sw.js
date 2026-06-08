@@ -1,7 +1,7 @@
-// GT-SQR Service Worker v8 — release v3.0.0
+// GT-SQR Service Worker v6 — release v3.1.0 (vtitle + project save)
 // يجب رفع رقم الإصدار عند كل تحديث للملفات
 // v8: bump to v3.0 release (surah name + all v3 features)
-const CACHE_VER = "gt-sqr-v8";
+const CACHE_VER = "gt-sqr-v6";
 
 // الأصول المطلوبة لعمل التطبيق بدون إنترنت
 // ⚠️ أي ملف هنا غير موجود سيمنع تسجيل SW بالكامل
