@@ -1,3 +1,11 @@
+## [3.3.4] — 2026-06-07
+
+### مزامنة دوالّ recvid مع GT-SIRM + إلغاء autoFitCanvasToVideo
+
+نُسخت 9 دوالّ بحرفيّة من GT-SIRM (نسخة الويب). حُذفت autoFitCanvasToVideo.
+
+PWA cache bump v15.
+
 ## [3.3.3] — 2026-06-07
 
 ### ضبط أبعاد الكانفاس على نسبة فيديو التلاوة
