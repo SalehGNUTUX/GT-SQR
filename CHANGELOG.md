@@ -1,3 +1,9 @@
+## [3.3.6] — 2026-06-07
+
+### إصلاح تداخل الصوت في وضع recvid
+
+نفس GT-SQRM v3.3.6 (نسخة الويب). PWA cache bump v17.
+
 ## [3.3.5] — 2026-06-07
 
 ### إصلاح: removeBlackBackground is not defined
