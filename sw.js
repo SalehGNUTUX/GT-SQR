@@ -1,7 +1,7 @@
 // GT-SQR Service Worker v10 — release v3.2.0 (Chromakey + recvid + logo chroma)
 // يجب رفع رقم الإصدار عند كل تحديث للملفات
 // v8: bump to v3.0 release (surah name + all v3 features)
-const CACHE_VER = "gt-sqr-v10";
+const CACHE_VER = "gt-sqr-v11";
 
 // الأصول المطلوبة لعمل التطبيق بدون إنترنت
 // ⚠️ أي ملف هنا غير موجود سيمنع تسجيل SW بالكامل

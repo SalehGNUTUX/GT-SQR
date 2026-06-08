@@ -1,3 +1,25 @@
+## [3.3.0] — 2026-06-07
+
+### 🎥 تنظيم قسم التلاوة + إصلاحات التصدير
+
+#### نقل فيديو التلاوة لأعلى + إلغاء تلقائيّ لمصادر القرآن
+- قسم 🎥 فيديو تلاوة جاهز في أعلى تبويب التلاوة.
+- مصادر القرآن (السورة + القارئ + التوقيت) مغلّفة في `#quran-sources-wrap`.
+- تفعيل recvid → إخفاء wrap + stopRecitationAudio + مسح verses.
+- إلغاء recvid → إظهار wrap + إعادة تحميل السورة.
+
+#### إصلاح تصدير V2 WebCodecs
+- `seekVideoToTimeWeb` قبل كلّ drawFrame.
+- timeout أمان 800ms.
+
+#### إصلاح تصدير V1 MediaRecorder
+- تشغيل recVidEl من 0 + إيقافه في stopExportSources.
+
+#### dirty tracking لرفع الملفّات
+- markProjectDirty في onBgMedia/onBgAudio/addBgVidItem/onRecVidFile.
+
+📦 PWA cache bump → v11.
+
 ## [3.2.0] — 2026-06-07
 
 ### 🎭 Chromakey + 🎥 فيديو تلاوة جاهز + 🖼️ شعار شفّاف
