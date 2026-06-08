@@ -1,3 +1,9 @@
+## [3.3.5] — 2026-06-07
+
+### إصلاح: removeBlackBackground is not defined
+
+نفس إصلاح GT-SQRM v3.3.5. PWA cache bump v16.
+
 ## [3.3.4] — 2026-06-07
 
 ### مزامنة دوالّ recvid مع GT-SIRM + إلغاء autoFitCanvasToVideo
