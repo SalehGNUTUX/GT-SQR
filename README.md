@@ -12,7 +12,7 @@
 [![Version](https://img.shields.io/badge/Version-3.4.0-brightgreen)](./CHANGELOG.md)
 [![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen?logo=github)](https://salehgnutux.github.io/GT-SQR/)
 
-[🌐 التجربة المباشرة](https://salehgnutux.github.io/GT-SQR/) · [📋 الإبلاغ عن مشكلة](https://github.com/SalehGNUTUX/GT-SQR/issues) · [⭐ دعم المشروع](https://github.com/SalehGNUTUX/GT-SQR)
+[🌐 التجربة المباشرة](https://salehgnutux.github.io/GT-SQR/) · [📦 تحميل الإصدار v3.4.0](https://github.com/SalehGNUTUX/GT-SQR/releases/tag/v3.4.0) · [📋 الإبلاغ عن مشكلة](https://github.com/SalehGNUTUX/GT-SQR/issues) · [⭐ دعم المشروع](https://github.com/SalehGNUTUX/GT-SQR)
 
 </div>
 
