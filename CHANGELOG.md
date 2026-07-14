@@ -1,3 +1,43 @@
+## [3.4.0] — 2026-07-14
+
+### مقاطع خَلفيّة مُتَقَدّمة + Undo/Redo + عَلامة مائيّة مُطَوَّرة (منقولة من GT-SIRM v1.2)
+
+#### مقاطع الخَلفيّة (playlist) — 12 تَحسيناً وإصلاحاً
+- **👁️ إعماء (hidden) لِكُلّ مَقطع** — يَبقى في القائمة، يُتَخَطّى في التَبديل والـcrossfade والتَصدير. زَرّ 👁️/👁️‍🗨️ في كُلّ صَفّ.
+- **✂️ تَقليم لِكُلّ مَقطع (per-clip trim)** — حَقلا "من/إلى" بجَنب كُلّ مَقطع + زَرّ ↺ إفراغ. يَعمَل في المُعاينَة والتَصدير.
+- **🎨 11 نَمط اِنتقال** — بَديل عن fade فَقط: `wipeleft/right/slideleft/right/up/down/circleopen/close/radial/dissolve`. عامّ عَبر `#bg-transition` أَو per-clip من dropdown في كُلّ صَفّ. `drawBgTransition` + softness.
+- **↩️ Undo/Redo عامّ** — 30 إجراءً مَحفوظاً، أزرار في `#bg-vid-toolbar`، اختصارات Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z.
+- **♻️ استعادة آخر مَقطع مَحذوف** — `restoreLastDeletedBgVid`.
+- **🌟 وميض ذَهبيّ عِند النَقل** — `.bgv-just-moved` animation.
+- **🖱️ نَقر عَلى صَفّ يُنَشِّط المُعاينَة**.
+- **🐛 Bug#4** — `switchToNextBgVid` يُوقِف المَقطع القَديم ويُعيد seek إلى trimStart.
+- **✨ إصلاح الوَميض** — `updateBgVidCrossfade` تَنتَقِل فَوراً عِند `remaining <= 0`.
+- **🔊 صَوت مُستَمِرّ** — `mixAudioToBufferWeb` تُبقي جميع المَقاطع المَرئيّة في timeline (buffer=null لِلصامِتة).
+- **📥 استعادة تَتابُعيّة** — `addBgVidItem` يُعيد Promise + خيار `silent`.
+- **🎬 WebM Infinity fix** — `getBgClipTrimEnd` يَستَخدِم `vid.duration` الحَيّة لَو كانت `item.dur=0`.
+- **🟢 حاشية خَضراء** — `activateBgVidByIndex` يُنَبِّه `renderBgVidList`.
+
+#### تَصدير الويب (WebCodecs)
+- **Bug#1** — استُبدِل `syncBgVidPlayback` (كان يَضبُط `playbackRate` حتى 16× → تَسريع مَرئيّ) بـ `getBgClipAtTimeWeb` + deterministic seek لِكُلّ إطار — نَفس نَمط recvid. يَحسِب `clipIndex`, `localTime`, `inXfade`, `xfadeAlpha` من `t / clipDurations / xf`.
+- استعادة `S.bgVid` / `S.bgVidNext` / `S.bgVidFadeProgress` بَعد التَصدير.
+- تَجاهُل المَقاطع المُعمّاة (`hidden`) في التَصدير.
+
+#### العَلامة المائيّة
+- `#wm-on` — توگل تَفعيل (اِفتراضيّاً مُفَعَّل).
+- `#wm-y-offset` — إزاحة رَأسيّة 0-40%.
+
+#### إصلاحات المُشَغِّل
+- `playRecitationAudio` — يَبدأ من `S.elapsed` (يَدعَم استئناف).
+- `pausePlayer` — يُوقِف `S.bgVidNext` أَيضاً.
+- `startPlayer` — يُشَغِّل `S.bgVidNext` أَيضاً.
+- `restartAll` — يُعيد `S.bgVid = bgVidItems[0].vid` + إعادة تَعيين preview src.
+
+#### إزالة سَلوك مُعطَّل
+- `applyBgVidTrim` — أُزيل مُراقِب `timeupdate` (كان يَقفِل المَقطع في وَضع playlist).
+
+#### PWA
+- Service Worker cache: `gt-sqr-v17` → `gt-sqr-v18`.
+
 ## [3.3.6] — 2026-06-07
 
 ### إصلاح تداخل الصوت في وضع recvid

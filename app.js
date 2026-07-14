@@ -131,7 +131,7 @@ const S = {
   elapsed: 0, lastRafTs: null,
   ayaDurations: [],
   bgImg: null, bgVid: null,
-  bgVidItems: [], // [{file, vid, name, dur, url}] — playlist لخلفية الفيديو
+  bgVidItems: [], // [{file, vid, name, dur, url, hidden, trimStart, trimEnd, transition}] — playlist لخلفية الفيديو
   mixedAnimsOrder: [],  // ترتيب التأثيرات المُفعَّلة في وضع "مختلط"
   bgVidActiveIdx: 0,
   bgVidNext: null,
@@ -237,6 +237,24 @@ function initEventListeners() {
   // v3.3.2 — زرّ إعادة من البداية
   const restartAllBtn = $("restart-all-btn");
   if (restartAllBtn) restartAllBtn.addEventListener("click", restartAll);
+
+  // v1.2 Feature #3/#4 — Undo/Redo + استعادة مَحذوف
+  $("bgv-undo-btn")?.addEventListener("click", historyUndo);
+  $("bgv-redo-btn")?.addEventListener("click", historyRedo);
+  $("bgv-restore-deleted-btn")?.addEventListener("click", restoreLastDeletedBgVid);
+  document.addEventListener("keydown", (e) => {
+    const tag = (e.target?.tagName || "").toUpperCase();
+    if (tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable) return;
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
+      e.preventDefault();
+      historyUndo();
+    } else if (((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "y") ||
+               ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "z")) {
+      e.preventDefault();
+      historyRedo();
+    }
+  });
+  updateHistoryUI();
 
   const pbar = $("pbar");
   if (pbar) pbar.addEventListener("click", seekClick);
@@ -372,6 +390,8 @@ function initEventListeners() {
     { id: "fsize", outId: "fsize-v", unit: "%" },
     { id: "lh", outId: "lh-v", unit: "" },
     { id: "wm-size", outId: "wm-size-v", unit: "px" },
+    { id: "wm-y-offset", outId: "wm-y-offset-v", unit: "%" },
+    { id: "bg-transition-softness", outId: "bg-transition-softness-v", unit: "%" },
     { id: "rec-vol", outId: "rec-vol-v", unit: "%" },
     { id: "bg-vol", outId: "bg-vol-v", unit: "%" },
     { id: "logo-size", outId: "logo-size-v", unit: "px" },
@@ -740,14 +760,11 @@ function drawBg(ctx, W, H, ts) {
     } else if (bgt === "video" && S.bgVid && S.bgVid.readyState >= 2) {
       updateBgVidCrossfade();
       const alpha = S.bgVidFadeProgress;
+      const hasNext = S.bgVidNext && S.bgVidNext.readyState >= 2 && alpha > 0;
       targetCtx.save();
       if (applyMotion) applyBgMotion(targetCtx, W, H, bgm, ts);
-      targetCtx.globalAlpha = 1 - alpha;
-      imgCover(targetCtx, S.bgVid, 0, 0, W, H);
-      if (S.bgVidNext && S.bgVidNext.readyState >= 2 && alpha > 0) {
-        targetCtx.globalAlpha = alpha;
-        imgCover(targetCtx, S.bgVidNext, 0, 0, W, H);
-      }
+      // v1.2 — دَعم 11 نَمط اِنتقال (per-clip transition لَو حُدّد)
+      drawBgTransition(targetCtx, S.bgVid, hasNext ? S.bgVidNext : null, alpha, W, H, getEffectiveBgTransition(), getBgTransitionSoftness());
       targetCtx.restore();
       return true;
     }
@@ -2291,12 +2308,22 @@ function drawWave(ctx, W, H, ts) {
 //  WATERMARK
 // ══════════════════════════════════════════════════════
 function drawWatermark(ctx, W, H) {
+  // v1.2 — توگل تفعيل + مَوضِع رَأسيّ قابِل للضَبط
+  const wmOn = $("wm-on");
+  if (wmOn && !wmOn.checked) return;
   const text = $("wm-text").value.trim(); if (!text) return;
   const sz = parseInt(gv("wm-size")), pos = $("wm-pos").value, col = $("wm-col").value;
+  const yOff = (parseFloat(gv("wm-y-offset")) || 0) / 100;
   ctx.save(); ctx.font = `bold ${sz}px 'Cairo'`; ctx.fillStyle = col; ctx.globalAlpha = .72;
   ctx.shadowColor = "rgba(0,0,0,.6)"; ctx.shadowBlur = 6;
   const pad = sz + 8;
-  const pm = { br: ["right", W - pad, H - pad], bl: ["left", pad, H - pad], tr: ["right", W - pad, pad + sz], tl: ["left", pad, pad + sz] };
+  const yBase = { br: H - pad, bl: H - pad, tr: pad + sz, tl: pad + sz };
+  const pm = {
+    br: ["right", W - pad, yBase.br - H * yOff],
+    bl: ["left",  pad,     yBase.bl - H * yOff],
+    tr: ["right", W - pad, yBase.tr + H * yOff],
+    tl: ["left",  pad,     yBase.tl + H * yOff],
+  };
   const [align, x, y] = pm[pos] || pm.br;
   ctx.textAlign = align; ctx.fillText(text, x, y);
   ctx.restore();
@@ -2375,7 +2402,8 @@ async function playRecitationAudio() {
     source.connect(gainNode);
     gainNode.connect(ctx.destination);
     gainNode.connect(S.analyser);
-    source.start(0);
+    // v1.2 — اِبدأ من موضع S.elapsed (يَدعَم استئناف من مَنتَصَف الآية)
+    source.start(0, S.elapsed || 0);
     source.onended = onEnded;
     S.recAudioSource = source;
     S.recGainNode = gainNode;
@@ -2396,6 +2424,10 @@ async function playRecitationAudio() {
         $("audio-status").textContent = `❌ فشل التحميل — ${reciter.name} الآية ${aya.numberInSurah}`;
       };
       a.src = url;
+      // v1.2 — استئناف من موضع S.elapsed
+      a.addEventListener("loadedmetadata", () => {
+        try { if ((S.elapsed || 0) > 0 && isFinite(a.duration)) a.currentTime = Math.min(S.elapsed, a.duration - 0.05); } catch (_) {}
+      }, { once: true });
       a.play().catch(() => {});
       S.recAudioEl = a;
       $("audio-status").textContent = `▶️ ${reciter.name} — الآية ${aya.numberInSurah}`;
@@ -2419,8 +2451,13 @@ function stopRecitationAudio() {
 }
 
 // ── تقطيع نطاق زمني للوسائط المحلية ───────────────────
+// v1.2 — يَستَخدِم per-clip trim (item.trimStart/trimEnd) إن وُجد للمَقطع النَشِط
 function getBgVidTrim() {
   if (!ge("bg-vid-trim-on") || !S.bgVid) return null;
+  const item = S.bgVidItems[S.bgVidActiveIdx];
+  if (item && typeof getBgClipTrimStart === "function") {
+    return { start: getBgClipTrimStart(item), end: getBgClipTrimEnd(item) };
+  }
   const s = Math.max(0, parseFloat(gv("bg-vid-trim-start")) || 0);
   const e = Math.max(s + 0.1, parseFloat(gv("bg-vid-trim-end")) || s + 1);
   const dur = S.bgVid.duration;
@@ -2439,16 +2476,8 @@ function applyBgVidTrim() {
   if (S.bgVid.currentTime < t.start || S.bgVid.currentTime > t.end) {
     try { S.bgVid.currentTime = t.start; } catch (_) {}
   }
-  if (!S.bgVid._trimHandler) {
-    S.bgVid._trimHandler = () => {
-      const tt = getBgVidTrim();
-      if (!tt) return;
-      if (S.bgVid.currentTime >= tt.end - 0.05) {
-        try { S.bgVid.currentTime = tt.start; } catch (_) {}
-      }
-    };
-    S.bgVid.addEventListener("timeupdate", S.bgVid._trimHandler);
-  }
+  // v1.2 — أُزيل مُراقِب timeupdate (كان يَقفِل المَقطع في وَضع playlist).
+  //   updateBgVidCrossfade تُدير حُدود trim + switchToNextBgVid تلقائيّاً
 }
 function applyBgAudioTrim() {
   const t = getBgAudioTrim();
@@ -2525,59 +2554,230 @@ function onBgMedia(input, type) {
   }
 }
 
+// ── نِظام Undo/Redo عامّ (v1.2) — تَجريبيّاً في multi-bg، سيُعَمَّم لاحِقاً ──
+S._history = { undo: [], redo: [], max: 30 };
+function historyPush(action) {
+  if (!action || typeof action.undo !== "function" || typeof action.redo !== "function") return;
+  S._history.undo.push(action);
+  while (S._history.undo.length > S._history.max) S._history.undo.shift();
+  S._history.redo.length = 0;
+  updateHistoryUI();
+}
+function historyUndo() {
+  const action = S._history.undo.pop();
+  if (!action) { toast?.("↩️ لا يوجد ما يُتراجَع عنه", "info", 1200); return; }
+  try { action.undo(); } catch (e) { console.warn("undo failed:", e); }
+  S._history.redo.push(action);
+  updateHistoryUI();
+  toast?.(`↩️ تَراجُع: ${action.label || "إجراء"}`, "info", 1200);
+}
+function historyRedo() {
+  const action = S._history.redo.pop();
+  if (!action) { toast?.("↪️ لا يوجد ما يُعاد", "info", 1200); return; }
+  try { action.redo(); } catch (e) { console.warn("redo failed:", e); }
+  S._history.undo.push(action);
+  updateHistoryUI();
+  toast?.(`↪️ إعادة: ${action.label || "إجراء"}`, "info", 1200);
+}
+function updateHistoryUI() {
+  const ub = document.getElementById("bgv-undo-btn");
+  const rb = document.getElementById("bgv-redo-btn");
+  const cb = document.getElementById("bgv-restore-deleted-btn");
+  if (ub) { ub.disabled = !S._history.undo.length; ub.title = S._history.undo.length ? `تَراجُع: ${S._history.undo[S._history.undo.length-1].label}` : "لا يوجد ما يُتراجَع عنه"; }
+  if (rb) { rb.disabled = !S._history.redo.length; rb.title = S._history.redo.length ? `إعادة: ${S._history.redo[S._history.redo.length-1].label}` : "لا يوجد ما يُعاد"; }
+  if (cb) {
+    const hasDeleted = S._history.undo.some(a => a.type === "bgVidDelete");
+    cb.disabled = !hasDeleted;
+    cb.title = hasDeleted ? "استعادة آخر مَقطع مَحذوف" : "لا يوجد مَقطع مَحذوف لِلاستعادة";
+  }
+}
+function restoreLastDeletedBgVid() {
+  for (let i = S._history.undo.length - 1; i >= 0; i--) {
+    if (S._history.undo[i].type === "bgVidDelete") {
+      const action = S._history.undo.splice(i, 1)[0];
+      try { action.undo(); } catch (e) { console.warn("restore-deleted failed:", e); }
+      updateHistoryUI();
+      toast?.(`♻️ استعادة: ${action.label}`, "success", 1400);
+      return;
+    }
+  }
+  toast?.("لا يوجد مَقطع مَحذوف لِلاستعادة", "info", 1200);
+}
+
 // ── إدارة قائمة مقاطع الخلفية (playlist) — مطابق لنسخة المكتبية ──
-function addBgVidItem(file) {
-  const url = URL.createObjectURL(file);
-  const vid = document.createElement("video");
-  vid.src = url; vid.muted = true; vid.playsInline = true; vid.preload = "auto";
-  vid.addEventListener("ended", () => switchToNextBgVid());
-  vid.onloadeddata = () => {
-    const item = {
-      file, vid, name: file.name,
-      dur: isFinite(vid.duration) ? vid.duration : 0,
-      url,
-      audioEnabled: false,   // الصوت معطّل افتراضياً
-      audioGain: 0.5,        // 50%
-      audioBuffer: null,     // يُفكّ ترميزه عند تفعيل الصوت (lazy)
+// v1.2 — إعماء (hidden) لكُلّ مَقطع
+function getNextVisibleBgVidIdx(fromIdx) {
+  const n = S.bgVidItems.length;
+  if (n === 0) return -1;
+  for (let step = 1; step <= n; step++) {
+    const idx = (fromIdx + step) % n;
+    if (!S.bgVidItems[idx].hidden) return idx;
+  }
+  return -1;
+}
+function getFirstVisibleBgVidIdx() {
+  const n = S.bgVidItems.length;
+  for (let i = 0; i < n; i++) if (!S.bgVidItems[i].hidden) return i;
+  return -1;
+}
+function toggleBgVidHidden(idx) {
+  if (idx < 0 || idx >= S.bgVidItems.length) return;
+  const it = S.bgVidItems[idx];
+  it.hidden = !it.hidden;
+  if (it.hidden && idx === S.bgVidActiveIdx) {
+    const nxt = getFirstVisibleBgVidIdx();
+    if (nxt >= 0) activateBgVidByIndex(nxt, true);
+    else { try { it.vid.pause(); } catch (_) {} }
+  }
+  if (typeof markProjectDirty === "function") markProjectDirty();
+  renderBgVidList();
+  toast(it.hidden ? "👁️‍🗨️ أُعمِيَ المَقطع (يَبقى مَحفوظاً)" : "👁️ أُعيدَ إظهار المَقطع", "info", 1500);
+}
+
+// v1.2 Feature #2 — per-clip trim
+function getBgClipTrimStart(item) {
+  const s = parseFloat(item?.trimStart);
+  return isFinite(s) && s > 0 ? s : 0;
+}
+function getBgClipTrimEnd(item) {
+  if (!item) return 0;
+  let dur = item.dur || 0;
+  if ((!dur || !isFinite(dur)) && item.vid && isFinite(item.vid.duration) && item.vid.duration > 0) {
+    dur = item.vid.duration;
+    item.dur = dur;
+  }
+  const e = parseFloat(item.trimEnd);
+  if (isFinite(e) && e > 0) {
+    return dur > 0 ? Math.min(e, dur) : e;
+  }
+  return dur;
+}
+function getBgClipEffectiveDur(item) {
+  return Math.max(0.1, getBgClipTrimEnd(item) - getBgClipTrimStart(item));
+}
+function hasBgClipTrim(item) {
+  if (!item) return false;
+  const rawStart = parseFloat(item.trimStart);
+  if (isFinite(rawStart) && rawStart > 0.001) return true;
+  const rawEnd = parseFloat(item.trimEnd);
+  if (!isFinite(rawEnd) || rawEnd <= 0) return false;
+  const dur = item.dur || 0;
+  return dur > 0 ? (rawEnd < dur - 0.001) : true;
+}
+function setBgVidClipTrim(idx, which, value) {
+  const item = S.bgVidItems[idx];
+  if (!item) return;
+  const dur = item.dur || 0;
+  let v = parseFloat(value); if (!isFinite(v)) v = 0;
+  v = Math.max(0, Math.min(v, dur));
+  if (which === "trim-start") {
+    item.trimStart = v;
+    const curEnd = getBgClipTrimEnd(item);
+    if (curEnd <= v + 0.1) item.trimEnd = Math.min(dur, v + 0.1);
+  } else {
+    item.trimEnd = v <= getBgClipTrimStart(item) + 0.1 ? getBgClipTrimStart(item) + 0.1 : v;
+  }
+  if (idx === S.bgVidActiveIdx && item.vid) {
+    const s = getBgClipTrimStart(item), e = getBgClipTrimEnd(item);
+    try { if (item.vid.currentTime < s || item.vid.currentTime > e) item.vid.currentTime = s; } catch (_) {}
+  }
+  if (typeof markProjectDirty === "function") markProjectDirty();
+  renderBgVidList();
+}
+function resetBgVidClipTrim(idx) {
+  const item = S.bgVidItems[idx];
+  if (!item) return;
+  item.trimStart = 0;
+  item.trimEnd = null;
+  if (typeof markProjectDirty === "function") markProjectDirty();
+  renderBgVidList();
+  toast("↺ أُعيدَ تَقليم المَقطع", "info", 1200);
+}
+
+// v1.2 — يُعيد Promise<item|null> لِيَتَمَكَّن الاستعادة من الـawait التَتابُعيّ
+function addBgVidItem(file, opts = {}) {
+  const silent = !!opts.silent;
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const vid = document.createElement("video");
+    vid.src = url; vid.muted = true; vid.playsInline = true; vid.preload = "auto";
+    vid.addEventListener("ended", () => switchToNextBgVid());
+    vid.onloadeddata = () => {
+      const item = {
+        file, vid, name: file.name,
+        dur: isFinite(vid.duration) ? vid.duration : 0,
+        url,
+        audioEnabled: false,
+        audioGain: 0.5,
+        audioBuffer: null,
+        hidden: false,
+        trimStart: 0,
+        trimEnd: null,
+        transition: "",
+      };
+      S.bgVidItems.push(item);
+      if (typeof markProjectDirty === "function") markProjectDirty();
+      if (!S.bgVid) {
+        S.bgVid = vid;
+        S.bgVidActiveIdx = S.bgVidItems.length - 1;
+        const thumb = $("bg-vid-thumb"); if (thumb) thumb.style.display = "block";
+        const prev = $("bg-vid-preview"); if (prev) prev.src = url;
+        try { vid.pause(); vid.currentTime = 0; } catch (_) {}
+      }
+      renderBgVidList();
+      if (!silent) {
+        if (S.bgVidItems.length === 1) {
+          toast("🎥 تم رفع المقطع — يمكن إضافة المزيد لتتابع الخلفيات", "success", 3500);
+        } else {
+          toast(`🎥 أُضيف المقطع (${S.bgVidItems.length} مجموع)`, "success", 2000);
+        }
+      }
+      resolve(item);
     };
-    S.bgVidItems.push(item);
-    if (typeof markProjectDirty === "function") markProjectDirty();
-    if (!S.bgVid) {
-      S.bgVid = vid;
-      S.bgVidActiveIdx = S.bgVidItems.length - 1;
-      const thumb = $("bg-vid-thumb"); if (thumb) thumb.style.display = "block";
-      const prev = $("bg-vid-preview"); if (prev) prev.src = url;
-      // الفيديو يبقى متوقفاً عند الرفع — يُشغَّل فقط مع ضغط ▶️
-      // (متناغم مع play/pause/next/prev للآيات)
-      try { vid.pause(); vid.currentTime = 0; } catch (_) {}
-    }
-    renderBgVidList();
-    if (S.bgVidItems.length === 1) {
-      toast("🎥 تم رفع المقطع — يمكن إضافة المزيد لتتابع الخلفيات", "success", 3500);
-    } else {
-      toast(`🎥 أُضيف المقطع (${S.bgVidItems.length} مجموع)`, "success", 2000);
-    }
-  };
-  vid.onerror = () => toast(`❌ فشل تحميل ${file.name}`, "error");
-  vid.load();
+    vid.onerror = () => {
+      if (!silent) toast(`❌ فشل تحميل ${file.name}`, "error");
+      resolve(null);
+    };
+    vid.load();
+  });
 }
 
 function switchToNextBgVid() {
-  if (S.bgVidItems.length < 2) {
-    if (S.bgVid) { try { S.bgVid.currentTime = 0; S.bgVid.play().catch(() => {}); } catch (_) {} }
+  const visibleCount = S.bgVidItems.filter(it => !it.hidden).length;
+  if (visibleCount < 2) {
+    if (S.bgVid) {
+      const item = S.bgVidItems[S.bgVidActiveIdx];
+      const s = item ? getBgClipTrimStart(item) : 0;
+      try { S.bgVid.currentTime = s; S.bgVid.play().catch(() => {}); } catch (_) {}
+    }
     return;
   }
-  const nextIdx = (S.bgVidActiveIdx + 1) % S.bgVidItems.length;
-  // مهم: لا تُعِد currentTime — التالي يلعب فعلاً منذ crossfade
-  // (إعادته كانت تسبّب rewind مرئياً بقدر مدة الـ crossfade)
+  const nextIdx = getNextVisibleBgVidIdx(S.bgVidActiveIdx);
+  if (nextIdx < 0) return;
+  const oldVid = S.bgVid;                           // v1.2 Bug#4
   const active = S.bgVidItems[nextIdx];
+  const hadCrossfade = (S.bgVidNext === active.vid);
   S.bgVidActiveIdx = nextIdx;
   S.bgVid = active.vid;
+  if (!hadCrossfade) {
+    const tStart = (typeof getBgClipTrimStart === "function") ? getBgClipTrimStart(active) : 0;
+    try { active.vid.currentTime = tStart; } catch (_) {}
+  } else {
+    const tStart = (typeof getBgClipTrimStart === "function") ? getBgClipTrimStart(active) : 0;
+    const tEnd   = (typeof getBgClipTrimEnd   === "function") ? getBgClipTrimEnd(active)   : (active.vid.duration || 0);
+    try {
+      if (active.vid.currentTime < tStart || active.vid.currentTime >= tEnd - 0.05) {
+        active.vid.currentTime = tStart;
+      }
+    } catch (_) {}
+  }
   S.bgVidNext = null;
   S.bgVidFadeProgress = 0;
-  // ضمان استمرار التشغيل إن كان توقّف لسبب ما
   if (S.playing || S._exportingV2) {
     try { active.vid.play().catch(() => {}); } catch (_) {}
+  }
+  if (oldVid && oldVid !== active.vid) {
+    try { oldVid.pause(); } catch (_) {}
   }
 }
 
@@ -2589,26 +2789,267 @@ function getCrossfadeDur() {
 function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
+
+// v1.2 — أَنماط الاِنتقالات بَين مقاطع الخَلفيّة
+function getBgTransition() {
+  return (document.getElementById("bg-transition")?.value || "fade");
+}
+function getBgTransitionSoftness() {
+  const v = parseFloat(document.getElementById("bg-transition-softness")?.value);
+  return isFinite(v) ? Math.max(0, Math.min(100, v)) / 100 : 0.3;
+}
+function getEffectiveBgTransition() {
+  const it = S.bgVidItems[S.bgVidActiveIdx];
+  if (it && typeof it.transition === "string" && it.transition) return it.transition;
+  return getBgTransition();
+}
+const BG_TRANSITION_TYPES = ["fade", "wipeleft", "wiperight", "slideleft", "slideright", "slideup", "slidedown", "circleopen", "circleclose", "radial", "dissolve"];
+
+function _getSoftMaskCanvas(W, H) {
+  if (!S._softMaskCanvas || S._softMaskCanvas.width !== W || S._softMaskCanvas.height !== H) {
+    S._softMaskCanvas = document.createElement("canvas");
+    S._softMaskCanvas.width = W;
+    S._softMaskCanvas.height = H;
+    S._softMaskCtx = S._softMaskCanvas.getContext("2d");
+  }
+  return { canvas: S._softMaskCanvas, ctx: S._softMaskCtx };
+}
+
+function drawBgTransition(ctx, srcCur, srcNext, alpha, W, H, type, softness) {
+  alpha = Math.max(0, Math.min(1, alpha));
+  softness = Math.max(0, Math.min(1, softness ?? 0));
+  const drawSrc = (s) => imgCover(ctx, s, 0, 0, W, H);
+  const drawSrcTo = (targetCtx, s) => imgCover(targetCtx, s, 0, 0, W, H);
+
+  if (type === "fade" || type === "dissolve" || !srcNext) {
+    ctx.globalAlpha = 1 - alpha;
+    drawSrc(srcCur);
+    if (srcNext) {
+      ctx.globalAlpha = alpha;
+      drawSrc(srcNext);
+    }
+    return;
+  }
+
+  if (type.startsWith("slide")) {
+    const dx     = (type === "slideleft")  ? -W * alpha       : (type === "slideright") ?  W * alpha       : 0;
+    const dy     = (type === "slideup")    ? -H * alpha       : (type === "slidedown")  ?  H * alpha       : 0;
+    const dxNext = (type === "slideleft")  ?  W * (1 - alpha) : (type === "slideright") ? -W * (1 - alpha) : 0;
+    const dyNext = (type === "slideup")    ?  H * (1 - alpha) : (type === "slidedown")  ? -H * (1 - alpha) : 0;
+
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.translate(dx, dy);
+    drawSrc(srcCur);
+    ctx.restore();
+
+    if (softness < 0.03) {
+      ctx.save();
+      ctx.translate(dxNext, dyNext);
+      drawSrc(srcNext);
+      ctx.restore();
+      return;
+    }
+
+    const { canvas: offCanvas, ctx: octx } = _getSoftMaskCanvas(W, H);
+    octx.setTransform(1, 0, 0, 1, 0, 0);
+    octx.clearRect(0, 0, W, H);
+    octx.globalAlpha = 1;
+    octx.globalCompositeOperation = "source-over";
+    octx.save();
+    octx.translate(dxNext, dyNext);
+    imgCover(octx, srcNext, 0, 0, W, H);
+    octx.restore();
+    const featherPx = Math.max(2, softness * Math.min(W, H) * 0.2);
+    octx.globalCompositeOperation = "destination-in";
+    let grad = null;
+    if (type === "slideleft") {
+      const edge = W * (1 - alpha);
+      grad = octx.createLinearGradient(edge - featherPx, 0, edge + featherPx, 0);
+      grad.addColorStop(0, "rgba(0,0,0,0)");
+      grad.addColorStop(1, "rgba(0,0,0,1)");
+    } else if (type === "slideright") {
+      const edge = W * alpha;
+      grad = octx.createLinearGradient(edge - featherPx, 0, edge + featherPx, 0);
+      grad.addColorStop(0, "rgba(0,0,0,1)");
+      grad.addColorStop(1, "rgba(0,0,0,0)");
+    } else if (type === "slideup") {
+      const edge = H * (1 - alpha);
+      grad = octx.createLinearGradient(0, edge - featherPx, 0, edge + featherPx);
+      grad.addColorStop(0, "rgba(0,0,0,0)");
+      grad.addColorStop(1, "rgba(0,0,0,1)");
+    } else if (type === "slidedown") {
+      const edge = H * alpha;
+      grad = octx.createLinearGradient(0, edge - featherPx, 0, edge + featherPx);
+      grad.addColorStop(0, "rgba(0,0,0,1)");
+      grad.addColorStop(1, "rgba(0,0,0,0)");
+    }
+    octx.fillStyle = grad;
+    octx.fillRect(0, 0, W, H);
+    octx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 1;
+    ctx.drawImage(offCanvas, 0, 0);
+    return;
+  }
+
+  ctx.globalAlpha = 1;
+  drawSrc(srcCur);
+
+  if (softness < 0.03) {
+    ctx.save();
+    ctx.beginPath();
+    _makeClipPath(ctx, type, alpha, W, H);
+    ctx.clip();
+    ctx.globalAlpha = 1;
+    drawSrc(srcNext);
+    ctx.restore();
+    return;
+  }
+
+  const { canvas: offCanvas, ctx: octx } = _getSoftMaskCanvas(W, H);
+  octx.setTransform(1, 0, 0, 1, 0, 0);
+  octx.clearRect(0, 0, W, H);
+  octx.globalAlpha = 1;
+  octx.globalCompositeOperation = "source-over";
+  drawSrcTo(octx, srcNext);
+
+  const featherPx = Math.max(2, softness * Math.min(W, H) * 0.25);
+
+  octx.globalCompositeOperation = "destination-in";
+  let grad = null;
+
+  if (type === "wipeleft") {
+    const bx = W * (1 - alpha);
+    grad = octx.createLinearGradient(bx - featherPx, 0, bx + featherPx, 0);
+    grad.addColorStop(0, "rgba(0,0,0,0)");
+    grad.addColorStop(1, "rgba(0,0,0,1)");
+  } else if (type === "wiperight") {
+    const bx = W * alpha;
+    grad = octx.createLinearGradient(bx - featherPx, 0, bx + featherPx, 0);
+    grad.addColorStop(0, "rgba(0,0,0,1)");
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+  } else if (type === "circleopen") {
+    const cx = W / 2, cy = H / 2;
+    const rMax = Math.sqrt(W * W + H * H) / 2;
+    const r = rMax * alpha;
+    const r0 = Math.max(0, r - featherPx);
+    const r1 = r + featherPx;
+    grad = octx.createRadialGradient(cx, cy, r0, cx, cy, r1);
+    grad.addColorStop(0, "rgba(0,0,0,1)");
+    grad.addColorStop(1, "rgba(0,0,0,0)");
+  } else if (type === "circleclose") {
+    const cx = W / 2, cy = H / 2;
+    const rMax = Math.sqrt(W * W + H * H) / 2;
+    const r = rMax * (1 - alpha);
+    const r0 = Math.max(0, r - featherPx);
+    const r1 = r + featherPx;
+    grad = octx.createRadialGradient(cx, cy, r0, cx, cy, r1);
+    grad.addColorStop(0, "rgba(0,0,0,0)");
+    grad.addColorStop(1, "rgba(0,0,0,1)");
+  }
+
+  if (grad) {
+    octx.fillStyle = grad;
+    octx.fillRect(0, 0, W, H);
+    octx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 1;
+    ctx.drawImage(offCanvas, 0, 0);
+    return;
+  }
+
+  if (softness < 0.03) {
+    ctx.save();
+    ctx.beginPath();
+    _makeClipPath(ctx, type, alpha, W, H);
+    ctx.clip();
+    ctx.globalAlpha = 1;
+    drawSrc(srcNext);
+    ctx.restore();
+    return;
+  }
+
+  const { canvas: offCanvas2, ctx: octx2 } = _getSoftMaskCanvas(W, H);
+  octx2.setTransform(1, 0, 0, 1, 0, 0);
+  octx2.clearRect(0, 0, W, H);
+  octx2.globalAlpha = 1;
+  octx2.globalCompositeOperation = "source-over";
+  imgCover(octx2, srcNext, 0, 0, W, H);
+  const featherPx2 = Math.max(2, softness * Math.min(W, H) * 0.08);
+  octx2.globalCompositeOperation = "destination-in";
+  octx2.filter = `blur(${featherPx2.toFixed(1)}px)`;
+  octx2.fillStyle = "rgba(0,0,0,1)";
+  octx2.beginPath();
+  _makeClipPath(octx2, type, alpha, W, H);
+  octx2.fill();
+  octx2.filter = "none";
+  octx2.globalCompositeOperation = "source-over";
+  ctx.globalAlpha = 1;
+  ctx.drawImage(offCanvas2, 0, 0);
+}
+
+function _makeClipPath(ctx, type, alpha, W, H) {
+  if (type === "wipeleft") {
+    const x = W * (1 - alpha);
+    ctx.rect(x, 0, W - x, H);
+  } else if (type === "wiperight") {
+    ctx.rect(0, 0, W * alpha, H);
+  } else if (type === "circleopen") {
+    const cx = W / 2, cy = H / 2;
+    const rMax = Math.sqrt(W * W + H * H) / 2;
+    ctx.arc(cx, cy, rMax * alpha, 0, Math.PI * 2);
+  } else if (type === "circleclose") {
+    const cx = W / 2, cy = H / 2;
+    const rMax = Math.sqrt(W * W + H * H) / 2;
+    ctx.rect(0, 0, W, H);
+    ctx.arc(cx, cy, rMax * (1 - alpha), 0, Math.PI * 2, true);
+  } else if (type === "radial") {
+    const cx = W / 2, cy = H / 2;
+    const rMax = Math.sqrt(W * W + H * H);
+    const ang = Math.PI * 2 * alpha;
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, rMax, -Math.PI / 2, -Math.PI / 2 + ang);
+    ctx.closePath();
+  } else {
+    ctx.rect(0, 0, W, H);
+  }
+}
+
 function updateBgVidCrossfade() {
-  if (!S.bgVid || S.bgVidItems.length < 2) {
+  if (S._exportingV2) return;
+  const visibleCount = S.bgVidItems.filter(it => !it.hidden).length;
+  if (!S.bgVid || visibleCount < 1) {
     S.bgVidNext = null; S.bgVidFadeProgress = 0; return;
   }
   const cur = S.bgVid;
   if (!isFinite(cur.duration) || cur.duration <= 0) return;
 
+  const curItem = S.bgVidItems[S.bgVidActiveIdx];
+  const endPoint = curItem ? getBgClipTrimEnd(curItem) : cur.duration;
+  const remaining = endPoint - cur.currentTime;
+
+  if (remaining <= 0) {
+    if (visibleCount >= 2) {
+      switchToNextBgVid();
+    } else if (curItem && hasBgClipTrim(curItem)) {
+      try { cur.currentTime = getBgClipTrimStart(curItem); cur.play().catch(() => {}); } catch (_) {}
+    }
+    S.bgVidNext = null; S.bgVidFadeProgress = 0;
+    return;
+  }
+
+  if (visibleCount < 2) { S.bgVidNext = null; S.bgVidFadeProgress = 0; return; }
+
   const xf = getCrossfadeDur();
   if (xf <= 0) { S.bgVidNext = null; S.bgVidFadeProgress = 0; return; }
 
-  const trim = (typeof getBgVidTrim === "function") ? getBgVidTrim() : null;
-  const endPoint = trim ? trim.end : cur.duration;
-  const remaining = endPoint - cur.currentTime;
-
   if (remaining <= xf && remaining > 0) {
-    const nextIdx = (S.bgVidActiveIdx + 1) % S.bgVidItems.length;
+    const nextIdx = getNextVisibleBgVidIdx(S.bgVidActiveIdx);
+    if (nextIdx < 0) { S.bgVidNext = null; S.bgVidFadeProgress = 0; return; }
     const nextItem = S.bgVidItems[nextIdx];
     if (S.bgVidNext !== nextItem.vid) {
       S.bgVidNext = nextItem.vid;
-      try { nextItem.vid.currentTime = 0; nextItem.vid.play().catch(() => {}); } catch (_) {}
+      const nextStart = getBgClipTrimStart(nextItem);
+      try { nextItem.vid.currentTime = nextStart; nextItem.vid.play().catch(() => {}); } catch (_) {}
     }
     const linear = Math.max(0, Math.min(1, 1 - (remaining / xf)));
     S.bgVidFadeProgress = easeInOutCubic(linear);
@@ -2638,12 +3079,14 @@ function activateBgVidByIndex(idx, resetTime = true) {
     } catch (_) {}
   }
   if (S.playing) { try { item.vid.play().catch(() => {}); } catch (_) {} }
+  if (typeof renderBgVidList === "function") renderBgVidList();
 }
 
-function removeBgVidItem(idx) {
-  if (idx < 0 || idx >= S.bgVidItems.length) return;
+// v1.2 — الحَذف الأَصليّ (بدون Undo history)
+function _removeBgVidItemCore(idx) {
+  if (idx < 0 || idx >= S.bgVidItems.length) return null;
   const item = S.bgVidItems[idx];
-  try { item.vid.pause(); URL.revokeObjectURL(item.url); } catch (_) {}
+  try { item.vid.pause(); } catch (_) {}
   S.bgVidItems.splice(idx, 1);
   if (S.bgVidItems.length === 0) {
     S.bgVid = null;
@@ -2653,21 +3096,72 @@ function removeBgVidItem(idx) {
     activateBgVidByIndex(0, true);
   }
   renderBgVidList();
+  return item;
+}
+
+function removeBgVidItem(idx) {
+  if (idx < 0 || idx >= S.bgVidItems.length) return;
+  const item = S.bgVidItems[idx];
+  const wasActiveIdx = S.bgVidActiveIdx;
+  _removeBgVidItemCore(idx);
+  historyPush({
+    type: "bgVidDelete",
+    label: `مَقطع «${item.name || "بلا اسم"}»`,
+    undo: () => {
+      S.bgVidItems.splice(idx, 0, item);
+      if (typeof markProjectDirty === "function") markProjectDirty();
+      if (wasActiveIdx === idx || !S.bgVid) {
+        activateBgVidByIndex(idx, true);
+      } else {
+        renderBgVidList();
+      }
+    },
+    redo: () => {
+      const i = S.bgVidItems.indexOf(item);
+      if (i >= 0) _removeBgVidItemCore(i);
+    },
+  });
+}
+
+function highlightMovedBgVidItem(idx) {
+  requestAnimationFrame(() => {
+    const el = document.querySelector(`.bgv-item[data-idx="${idx}"]`);
+    if (!el) return;
+    el.classList.remove("bgv-just-moved");
+    void el.offsetWidth;
+    el.classList.add("bgv-just-moved");
+    try { el.scrollIntoView({ behavior: "smooth", block: "nearest" }); } catch (_) {}
+    setTimeout(() => el.classList.remove("bgv-just-moved"), 1500);
+  });
+}
+
+function _moveBgVidItemCore(fromIdx, toIdx) {
+  if (fromIdx === toIdx || fromIdx < 0 || toIdx < 0 || fromIdx >= S.bgVidItems.length || toIdx >= S.bgVidItems.length) return;
+  const [moved] = S.bgVidItems.splice(fromIdx, 1);
+  S.bgVidItems.splice(toIdx, 0, moved);
+  activateBgVidByIndex(0, true);
+  renderBgVidList();
+  highlightMovedBgVidItem(toIdx);
 }
 
 function moveBgVidItem(idx, dir) {
   const newIdx = idx + dir;
   if (newIdx < 0 || newIdx >= S.bgVidItems.length) return;
-  const [moved] = S.bgVidItems.splice(idx, 1);
-  S.bgVidItems.splice(newIdx, 0, moved);
-  activateBgVidByIndex(0, true);  // التأثير فوري: ابدأ من الأول دائماً بعد الترتيب
-  renderBgVidList();
+  const item = S.bgVidItems[idx];
+  _moveBgVidItemCore(idx, newIdx);
+  historyPush({
+    type: "bgVidMove",
+    label: `نَقل «${item.name || "بلا اسم"}» ${dir < 0 ? "↑" : "↓"}`,
+    undo: () => _moveBgVidItemCore(newIdx, idx),
+    redo: () => _moveBgVidItemCore(idx, newIdx),
+  });
 }
 
 // تطبيق إعدادات صوت العنصر على عنصر الفيديو
 function applyBgVidItemAudio(item) {
   if (!item || !item.vid) return;
-  item.vid.muted = !item.audioEnabled;
+  const globalMute = !!ge("bg-vid-mute-audio");
+  item.vid.muted = globalMute || !item.audioEnabled;
   item.vid.volume = Math.max(0, Math.min(1, item.audioGain));
 }
 
@@ -2707,25 +3201,67 @@ function renderBgVidList() {
     const dur = it.dur ? it.dur.toFixed(1) + "ث" : "—";
     const audioOn = it.audioEnabled;
     const volPct = Math.round((it.audioGain || 0) * 100);
-    return `<div class="bgv-item" data-idx="${i}">
+    const hidden = !!it.hidden;
+    const active = (i === S.bgVidActiveIdx);
+    const rowStyle = (hidden ? 'opacity:.45;' : '') + (active ? 'outline:2px solid var(--acc,#4caf50);' : '') + 'cursor:pointer';
+    const tStart = getBgClipTrimStart(it);
+    const tEnd   = getBgClipTrimEnd(it);
+    const trimActive = hasBgClipTrim(it);
+    const durMax = (it.dur || 0).toFixed(2);
+    return `<div class="bgv-item${hidden ? ' bgv-hidden' : ''}${active ? ' bgv-active' : ''}" data-idx="${i}" style="${rowStyle}" title="اِنقر لعرض المُعاينة">
       <span class="bgv-idx">${i + 1}</span>
       <span class="bgv-name" title="${escHtml(it.name)}">${escHtml(it.name)}</span>
       <span class="bgv-dur">${dur} · ${sz}MB</span>
+      <button data-act="hide" class="${hidden ? 'on' : ''}" title="${hidden ? 'إعادة إظهار المَقطع' : 'إعماء المَقطع (يَبقى مَحفوظاً)'}">${hidden ? '👁️‍🗨️' : '👁️'}</button>
       <button data-act="audio" class="${audioOn ? 'on' : ''}" title="${audioOn ? 'كتم صوت المقطع' : 'تفعيل صوت المقطع'}">${audioOn ? '🔊' : '🔇'}</button>
       <input type="range" class="bgv-vol" min="0" max="100" value="${volPct}" data-act="vol" title="مستوى صوت المقطع: ${volPct}%" ${audioOn ? '' : 'style="visibility:hidden"'}>
       <button data-act="up"     ${i === 0 ? "disabled" : ""} title="أعلى">▲</button>
       <button data-act="down"   ${i === S.bgVidItems.length - 1 ? "disabled" : ""} title="أسفل">▼</button>
       <button data-act="remove" title="إزالة">✕</button>
+      <span class="bgv-trim-block${trimActive ? ' on' : ''}" title="تَقليم مُدّة المَقطع + نَمط الاِنتقال">
+        <span title="تَقليم" style="margin-inline-end:6px">✂️</span>
+        <input type="number" min="0" max="${durMax}" step="0.1" value="${tStart.toFixed(2)}" data-act="trim-start" title="بَدء المَقطع (ث)">
+        <span>→</span>
+        <input type="number" min="0" max="${durMax}" step="0.1" value="${tEnd.toFixed(2)}" data-act="trim-end" title="نِهاية المَقطع (ث)">
+        <button data-act="trim-reset" title="إفراغ التَقليم (المَقطع كامِلاً)" ${trimActive ? '' : 'disabled'}>↺</button>
+        <span title="نَمط اِنتقال">🎞️</span>
+        <select data-act="clip-transition" title="نَمط اِنتقال هذا المَقطع (— عامّ — = يَتبَع الإعداد العامّ)">
+          <option value="">— عامّ —</option>
+          <option value="fade">✨ ناعم</option>
+          <option value="wipeleft">◀️ مَسح يَسار</option>
+          <option value="wiperight">▶️ مَسح يَمين</option>
+          <option value="slideleft">⬅️ اِنزلاق يَسار</option>
+          <option value="slideright">➡️ اِنزلاق يَمين</option>
+          <option value="slideup">⬆️ اِنزلاق أَعلى</option>
+          <option value="slidedown">⬇️ اِنزلاق أَسفل</option>
+          <option value="circleopen">⚪ دائرة تَنفَتِح</option>
+          <option value="circleclose">⚫ دائرة تَنغَلِق</option>
+          <option value="radial">🌀 قَطاعيّ</option>
+          <option value="dissolve">💫 مُذَوَّب</option>
+        </select>
+      </span>
     </div>`;
   }).join("");
+  el.querySelectorAll(".bgv-item").forEach(row => {
+    row.addEventListener("click", (e) => {
+      if (e.target.closest("button") || e.target.closest("input") || e.target.closest("select")) return;
+      const idx = parseInt(row.dataset.idx);
+      if (!isNaN(idx) && !S.bgVidItems[idx]?.hidden) {
+        activateBgVidByIndex(idx, true);
+      }
+    });
+  });
   el.querySelectorAll(".bgv-item button").forEach(btn => {
     btn.addEventListener("click", (e) => {
+      e.stopPropagation();
       const idx = parseInt(e.currentTarget.closest(".bgv-item").dataset.idx);
       const act = e.currentTarget.dataset.act;
-      if (act === "up")          moveBgVidItem(idx, -1);
-      else if (act === "down")   moveBgVidItem(idx, +1);
-      else if (act === "remove") removeBgVidItem(idx);
-      else if (act === "audio")  toggleBgVidAudio(idx);
+      if (act === "up")              moveBgVidItem(idx, -1);
+      else if (act === "down")       moveBgVidItem(idx, +1);
+      else if (act === "remove")     removeBgVidItem(idx);
+      else if (act === "audio")      toggleBgVidAudio(idx);
+      else if (act === "hide")       toggleBgVidHidden(idx);
+      else if (act === "trim-reset") resetBgVidClipTrim(idx);
     });
   });
   el.querySelectorAll(".bgv-item input.bgv-vol").forEach(inp => {
@@ -2733,6 +3269,27 @@ function renderBgVidList() {
       const idx = parseInt(e.currentTarget.closest(".bgv-item").dataset.idx);
       setBgVidVolume(idx, parseFloat(e.currentTarget.value));
     });
+  });
+  el.querySelectorAll(".bgv-item input[data-act='trim-start'], .bgv-item input[data-act='trim-end']").forEach(inp => {
+    inp.addEventListener("change", (e) => {
+      e.stopPropagation();
+      const idx = parseInt(e.currentTarget.closest(".bgv-item").dataset.idx);
+      setBgVidClipTrim(idx, e.currentTarget.dataset.act, e.currentTarget.value);
+    });
+  });
+  el.querySelectorAll(".bgv-item select[data-act='clip-transition']").forEach(sel => {
+    const idx = parseInt(sel.closest(".bgv-item").dataset.idx);
+    const it = S.bgVidItems[idx];
+    if (it && typeof it.transition === "string") sel.value = it.transition;
+    sel.addEventListener("change", (e) => {
+      e.stopPropagation();
+      const i = parseInt(e.currentTarget.closest(".bgv-item").dataset.idx);
+      if (S.bgVidItems[i]) {
+        S.bgVidItems[i].transition = e.currentTarget.value || "";
+        if (typeof markProjectDirty === "function") markProjectDirty();
+      }
+    });
+    sel.addEventListener("click", (e) => e.stopPropagation());
   });
 }
 
@@ -2760,6 +3317,8 @@ function startPlayer() {
   if (S.bgAudioEl && !recvidActive) { S.bgAudioEl.loop = ge("bg-loop"); S.bgAudioEl.play().catch(() => { }); }
   else if (S.bgAudioEl && recvidActive) { try { S.bgAudioEl.pause(); } catch (_) {} }
   if (S.bgVid) { try { S.bgVid.play().catch(() => {}); } catch (_) {} }
+  // v1.2 — شَغِّل bgVidNext إن كان في مَنتَصَف الـcrossfade
+  if (S.bgVidNext) { try { S.bgVidNext.play().catch(() => {}); } catch (_) {} }
   if (recvidActive) { try { S.recVidEl.play().catch(() => {}); } catch (_) {} }
   else playRecitationAudio();
 }
@@ -2770,6 +3329,8 @@ function pausePlayer() {
   stopRecitationAudio();
   if (S.bgAudioEl) S.bgAudioEl.pause();
   if (S.bgVid) { try { S.bgVid.pause(); } catch (_) {} }
+  // v1.2 — أَوقِف bgVidNext أَيضاً
+  if (S.bgVidNext) { try { S.bgVidNext.pause(); } catch (_) {} }
   // v3.2
   if (S.recVidEl) { try { S.recVidEl.pause(); S.recVidEl.currentTime = 0; } catch (_) {} }
 }
@@ -2799,6 +3360,14 @@ function restartAll() {
     S.bgVidItems.forEach(it => {
       if (it.vid) { try { it.vid.pause(); it.vid.currentTime = 0; } catch (_) {} }
     });
+    // v1.2 — أَعِد التَنشيط على أَوّل مَقطع
+    if (S.bgVidItems[0]) {
+      S.bgVid = S.bgVidItems[0].vid;
+      const prev = $("bg-vid-preview");
+      if (prev) prev.src = S.bgVidItems[0].url;
+    }
+    S.bgVidNext = null;
+    S.bgVidFadeProgress = 0;
   }
   if (S.recVidEl) { try { S.recVidEl.pause(); S.recVidEl.currentTime = 0; } catch (_) {} }
 
@@ -4043,6 +4612,11 @@ async function serializeProject() {
         size: item.file?.size || 0, mime: item.file?.type || "video/mp4",
         active: i === S.bgVidActiveIdx,
         audioEnabled: !!item.audioEnabled, audioGain: item.audioGain ?? 0.5,
+        // v1.2 — حَفظ per-clip state
+        hidden: !!item.hidden,
+        trimStart: item.trimStart || 0,
+        trimEnd: (item.trimEnd == null) ? null : item.trimEnd,
+        transition: item.transition || "",
       };
       if (item.file && item.file.size <= ASSET_EMBED_MAX) { a.mode = "embedded"; a.dataURL = await fileToDataURL(item.file); }
       else { a.mode = "missing"; a.reason = item.file ? "حجم أكبر من 50MB" : "غير متوفّر"; }
@@ -4120,17 +4694,25 @@ async function restoreAssetFromDataURL(asset) {
     if (typeof onRecVidFile === "function") onRecVidFile(fakeInput);
   } else if (asset.key && asset.key.startsWith("bgVideo[")) {
     if (typeof addBgVidItem === "function") {
-      addBgVidItem(file);
-      setTimeout(() => {
-        if (Array.isArray(S.bgVidItems) && S.bgVidItems.length) {
-          const last = S.bgVidItems[S.bgVidItems.length - 1];
-          if (last) {
-            if (asset.audioEnabled !== undefined) last.audioEnabled = !!asset.audioEnabled;
-            if (asset.audioGain !== undefined) last.audioGain = asset.audioGain;
-            if (typeof renderBgVidList === "function") renderBgVidList();
-          }
+      // v1.2 — انتَظِر onloadeddata ثمّ طَبِّق الإعدادات مُباشَرَةً على item المُعاد
+      const item = await addBgVidItem(file, { silent: true });
+      if (item) {
+        if (asset.audioEnabled !== undefined) item.audioEnabled = !!asset.audioEnabled;
+        if (asset.audioGain !== undefined)   item.audioGain    = asset.audioGain;
+        if (asset.hidden !== undefined)      item.hidden       = !!asset.hidden;
+        if (asset.trimStart !== undefined)   item.trimStart    = asset.trimStart;
+        if (asset.trimEnd !== undefined)     item.trimEnd      = asset.trimEnd;
+        if (asset.transition !== undefined)  item.transition   = asset.transition || "";
+        if (typeof applyBgVidItemAudio === "function") applyBgVidItemAudio(item);
+        if (item.audioEnabled && !item.audioBuffer && item.file) {
+          try {
+            const ctx = await resumeAudioCtx();
+            const ab = await item.file.arrayBuffer();
+            item.audioBuffer = await ctx.decodeAudioData(ab.slice(0));
+          } catch (e) { console.warn("restore bg-vid audio decode failed:", e); }
         }
-      }, 250);
+        if (typeof renderBgVidList === "function") renderBgVidList();
+      }
     }
   }
 }
