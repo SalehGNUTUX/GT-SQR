@@ -9,7 +9,7 @@
 
 [![License: GPLv2](https://img.shields.io/badge/License-GPLv2-green.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
 [![PWA Ready](https://img.shields.io/badge/PWA-Ready-blueviolet?logo=pwa)](https://salehgnutux.github.io/GT-SQR/)
-[![Version](https://img.shields.io/badge/Version-3.0.0-brightgreen)](./CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-3.4.0-brightgreen)](./CHANGELOG.md)
 [![Live Demo](https://img.shields.io/badge/Live-Demo-brightgreen?logo=github)](https://salehgnutux.github.io/GT-SQR/)
 
 [🌐 التجربة المباشرة](https://salehgnutux.github.io/GT-SQR/) · [📋 الإبلاغ عن مشكلة](https://github.com/SalehGNUTUX/GT-SQR/issues) · [⭐ دعم المشروع](https://github.com/SalehGNUTUX/GT-SQR)
@@ -22,7 +22,44 @@
 
 **GT-SQR** تطبيق ويب متقدم (PWA) لإنشاء فيديوهات قرآنية قصيرة احترافية، جاهزة للنشر على منصات التواصل — مباشرةً من المتصفح بدون تثبيت.
 
-**v3.0.0** يجلب كل ميزات النسخة المكتبية بمزامنة كاملة: محرّك WebCodecs الحتمي، اسم السورة في الأعلى، 10 أنماط ظهور للآيات + المختلط، 9 أنماط ألوان، 9 أشكال دبدبات، قوالب منصات قابلة للحفظ، 16 خطاً قرآنياً، وأكثر.
+**v3.4.0** يَنقُل من GT-SIRM v1.2 نِظام Undo/Redo عامّ (`Ctrl+Z`)، إعماء (hidden) لكُلّ مَقطع خَلفيّة، تَقليم لكُلّ مَقطع (per-clip trim) في المُعاينَة والتَصدير، 11 نَمط اِنتقال بَديل عن fade فَقط، عَلامة مائيّة بتوگل تَفعيل + إزاحة رَأسيّة، وإصلاحات جَوهريّة في تَصدير WebCodecs (استُبدِل `playbackRate` بـ deterministic seek لِكُلّ إطار).
+
+**v3.0.0** كان قَد جَلَب كل ميزات النسخة المكتبية بمزامنة كاملة: محرّك WebCodecs الحتمي، اسم السورة في الأعلى، 10 أنماط ظهور للآيات + المختلط، 9 أنماط ألوان، 9 أشكال ذَبذبات، قوالب منصات قابلة للحفظ، 16 خطاً قرآنياً، وأكثر.
+
+---
+
+## 🆕 الجَديد في v3.4.0 (منقول من GT-SIRM v1.2)
+
+### 🎬 مقاطع الخَلفيّة (playlist) — 12 تَحسيناً وإصلاحاً
+- **👁️ إعماء (hidden) لِكُلّ مَقطع** — يَبقى في القائمة، يُتَخَطّى في التَبديل والـcrossfade والتَصدير.
+- **✂️ تَقليم لِكُلّ مَقطع (per-clip trim)** — حَقلا "من/إلى" بجَنب كُلّ مَقطع + زَرّ ↺ إفراغ. يَعمَل في المُعاينَة والتَصدير.
+- **🎨 11 نَمط اِنتقال** — بَديل عن fade فَقط: `wipeleft/right/slideleft/right/up/down/circleopen/close/radial/dissolve`. عامّ + per-clip من dropdown في كُلّ صَفّ. نُعومة حَواف قابِلة للضَبط (0-100%).
+- **↩️ Undo/Redo عامّ** — 30 إجراءً مَحفوظاً، اختصارات `Ctrl+Z` / `Ctrl+Y` / `Ctrl+Shift+Z`.
+- **♻️ استعادة آخر مَقطع مَحذوف**.
+- **🌟 وميض ذَهبيّ عِند النَقل**.
+- **🖱️ نَقر عَلى صَفّ يُنَشِّط المُعاينَة**.
+- **🐛 Bug#4** — المَقطع القَديم يُوقَف بَعد التَبديل.
+- **✨ إصلاح الوَميض** — اِنتقال فَوريّ عِند نِهاية المَقطع.
+- **🔊 صَوت مُستَمِرّ** — كُلّ المَقاطع المَرئيّة تُبقي مَواضِعها في timeline.
+- **📥 استعادة تَتابُعيّة** — تُطَبَّق الإعدادات مُباشَرَةً بَعد `await`.
+- **🎬 WebM Infinity fix** — التَقليم يَعمَل مَع WebM بمُدّة `Infinity`.
+
+### 🚀 تَصدير الويب (WebCodecs) — Bug#1
+- استُبدِل `syncBgVidPlayback` (كان يَضبُط `playbackRate` حتى 16× → تَسريع مَرئيّ + عَدَم تَزامُن في الـcrossfade) بـ `getBgClipAtTimeWeb` + deterministic `seekVideoToTimeWeb` لِكُلّ إطار — نَفس نَمط recvid.
+
+### 🏷️ العَلامة المائيّة
+- **توگل تَفعيل** `#wm-on` (اِفتراضيّاً مُفَعَّل).
+- **إزاحة رَأسيّة** 0-40%.
+
+### ⏯️ إصلاحات المُشَغِّل
+- التِلاوة تَبدأ من `S.elapsed` (يَدعَم استئناف).
+- `pausePlayer` / `startPlayer` يَشمَلان `S.bgVidNext` أَيضاً.
+- `restartAll` يُعيد ضَبط حالة الخَلفيّة كامِلَةً.
+
+### 📦 PWA
+- Service Worker cache: `gt-sqr-v17` → `gt-sqr-v18` (يَضمَن تَحديث الأُصول عَلى المُتَصَفِّحات المُخَبَّأة).
+
+راجع [`CHANGELOG.md`](./CHANGELOG.md) لِلتَفاصيل الكامِلة.
 
 ---
 
