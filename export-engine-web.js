@@ -74,6 +74,133 @@ function seekVideoToTimeWeb(v, t) {
   });
 }
 
+// ══════════════════════════════════════════════════════════════
+//  v1.2.4 — مُزامَنةُ خَلفيّةِ الفيديو بِالتَشغيلِ لا بِالنَقل
+//  ────────────────────────────────────────────────────────────
+//  قِياسٌ مِن جِهازِ المُستَخدِم: «إطاراتُ الخَلفيّةِ المُتَمَيِّزة: 5 مِن 689»
+//  أَي إطارٌ واحِدٌ كُلَّ خَمسِ ثَوانٍ تَقريباً — فَتَبدو الخَلفيّةُ مُتَقَطِّعةً في
+//  البِدايةِ ثُمَّ تَقِفُ. السَبَبُ أنَّ كُلَّ نَقلة (seek) تُعيدُ فَكَّ التَرميزِ مِن
+//  آخِرِ إطارٍ مِفتاحيّ، وهذا عَلى الهاتِفِ يُكَلِّفُ ثَوانِيَ لِلنَقلةِ الواحِدة.
+//
+//  الحَلُّ الجَذريّ: لا نَنقُلُ أَصلاً. نُشَغِّلُ الفيديو ونَضبِطُ **سُرعَتَه**
+//  لِتُطابِقَ سُرعَةَ تَقَدُّمِنا في التَصدير. فَكُّ التَرميزِ التَتابُعيُّ (التَشغيل)
+//  أَسرَعُ مِنَ النَقلِ بِمَراتِبَ، فَتَعودُ الخَلفيّةُ سَلِسةً بِمُعَدَّلِها الكامِل.
+//
+//  السُرعةُ المَطلوبة = (ثَواني الوَسيطِ المُنتَجة) ÷ (ثَواني الزَمَنِ الحَقيقيّ)،
+//  ويُضافُ إلَيها تَصحيحٌ تَناسُبيٌّ لِلانحِراف. وإن تَجاوَزَ الانحِرافُ الحَدَّ
+//  (لَفُّ القائِمةِ أو تَبديلُ مَقطَع) نَنقُلُ مَرّةً واحِدةً لِإعادةِ المُزامَنة.
+// ══════════════════════════════════════════════════════════════
+function createBgPlaybackSync() {
+  return {
+    clipIndex: -1,
+    lastWant: -1,
+    resyncs: 0,
+    rateChanges: 0,
+    playFailed: false,
+    playAborts: 0,          // v1.2.22 — رَفضُ play() العارِضُ لا الدائِم
+    // v1.2.20 — مُراقِبُ «الفيديو لا يَتَقَدَّم»
+    lastCurTime: -1,
+    stalled: 0,
+    slowSeek: false,
+  };
+}
+
+async function syncBgByPlayback(st, vid, wantTime, clipIndex, mediaDone, wallSec) {
+  if (!vid || !isFinite(vid.duration)) return;
+
+  // ⚠️ v1.2.20 — لِمَ 0.25 لا 0.0625؟
+  //   مُزامَنةُ التَشغيلِ تَضبِطُ سُرعةَ الفيديو لِتُطابِقَ تَقَدُّمَ التَصدير. فَإن
+  //   كانَ التَصديرُ بَطيئاً جِدّاً (تَحريكُ خَلفيّةٍ بِالتَكبير + مُؤَثِّراتٌ تَقرَأُ
+  //   البِكسِلات) هَبَطَتِ السُرعةُ المَطلوبةُ إلى عُشرِ الحَقيقيّ أَو أَقَلّ —
+  //   وعِندَ هذه السُرعاتِ لا يَتَقَدَّمُ مَجرى فَكِّ التَرميزِ في WebView أَصلاً،
+  //   فَتَخرُجُ **خَلفيّةٌ مُجَمَّدة** بَينَما يَعمَلُ كُلُّ شَيءٍ آخَرَ بِطَبيعَتِه.
+  //   (هذا سَبَبُ «التَكبير ⇒ خَلفيّةٌ مُجَمَّدة» بَينَما «ثابِت ⇒ سَليم».)
+  //   دونَ 0.25 لا فائِدةَ مِنَ التَشغيلِ أَصلاً: النَقلُ (seek) أَدَقُّ وأَوثَق،
+  //   وكُلفَتُهُ لا تُذكَرُ ما دُمنا بَطيئينَ إلى هذا الحَدّ.
+  const RESYNC_EPS = 0.75;   // ثانِية — فَوقَها نَنقُلُ مَرّةً واحِدة
+  const RATE_MIN = 0.25, RATE_MAX = 4;
+  const SEEK_EPS = 0.05;     // في وَضعِ النَقلِ نُطابِقُ كُلَّ إطارٍ تَقريباً
+  const STALL_LIMIT = 6;     // إطاراتٌ مُتَتالِيةٌ بِلا تَقَدُّمٍ ⇒ التَشغيلُ عاجِز
+
+  // تَبديلُ مَقطَعٍ أو رُجوعٌ لِلوَراء (لَفُّ القائِمة) ⇒ إعادةُ مُزامَنةٍ صَريحة
+  const switched = (clipIndex !== st.clipIndex) || (wantTime + 0.05 < st.lastWant);
+  st.clipIndex = clipIndex;
+  st.lastWant = wantTime;
+
+  const drift = vid.currentTime - wantTime;
+
+  // ── مُراقِبُ الجُمود: هَل يَتَقَدَّمُ الفيديو فِعلاً؟ ────────────────
+  //   v1.2.20 — لا نَثِقُ بِأَنَّ `play()` نَجَحَ لِأَنَّهُ لَم يَرمِ خَطَأً: قَد
+  //   يَقبَلُهُ المُحَرِّكُ ثُمَّ لا يُقَدِّمُ إطاراً واحِداً. نَقيسُ التَقَدُّمَ نَفسَه.
+  if (!st.slowSeek && !switched && st.lastCurTime >= 0) {
+    if (Math.abs(vid.currentTime - st.lastCurTime) < 1e-4) {
+      if (++st.stalled >= STALL_LIMIT) {
+        st.slowSeek = true;
+        console.warn("[V2] خَلفيّةُ الفيديو لا تَتَقَدَّمُ بِالتَشغيل — التَحَوُّلُ إلى النَقل");
+      }
+    } else st.stalled = 0;
+  }
+  st.lastCurTime = vid.currentTime;
+
+  // السُرعةُ الأَساسُ = نِسبةُ تَقَدُّمِنا الحَقيقيّ، مَعَ تَصحيحِ الانحِراف
+  const base = (wallSec > 0.4) ? (mediaDone / wallSec) : 0.5;
+  let rate = base - drift * 1.2;
+  if (!isFinite(rate)) rate = base;
+
+  // بَطيءٌ أَكثَرَ مِمّا يُطيقُهُ التَشغيل ⇒ اِنقُل بَدَلَ أَن تُشَغِّل
+  const tooSlow = rate < RATE_MIN;
+  if (tooSlow || st.slowSeek || st.playFailed) {
+    if (!vid.paused) { try { vid.pause(); } catch (_) {} }
+    if (switched || Math.abs(drift) > SEEK_EPS) {
+      st.resyncs++;
+      await seekVideoToTimeWeb(vid, wantTime, 0.03, 1200);
+      st.lastCurTime = vid.currentTime;
+    }
+    return;
+  }
+
+  if (switched || Math.abs(drift) > RESYNC_EPS) {
+    st.resyncs++;
+    try { vid.pause(); } catch (_) {}
+    await seekVideoToTimeWeb(vid, wantTime, 0.03, 1200);
+    st.lastCurTime = vid.currentTime;
+  }
+
+  rate = Math.max(RATE_MIN, Math.min(RATE_MAX, rate));
+  if (Math.abs(vid.playbackRate - rate) > 0.03) {
+    try { vid.playbackRate = rate; st.rateChanges++; } catch (_) {}
+  }
+  if (vid.paused) {
+    try {
+      vid.muted = true;             // الصَوتُ يُخلَطُ مُنفَصِلاً — والكَتمُ يُجيزُ التَشغيلَ بِلا إيماءة
+      await vid.play();
+      st.playAborts = 0;
+    } catch (e) {
+      // ⚠️ v1.2.22 — لا تُعامِل كُلَّ رَفضٍ مُعامَلةَ المَنعِ الدائِم.
+      //   `play()` يُعيدُ وَعداً؛ فَإن استَدعَينا `pause()` قَبلَ أَن يُحسَم —
+      //   وهذا يَقَعُ في الإطارِ التالي كُلَّما لَزِمَت إعادةُ مُزامَنة — رُفِضَ
+      //   الوَعدُ بِـAbortError: «The play() request was interrupted by a call
+      //   to pause()». وهُوَ **فِعلُنا نَحنُ** لا مَنعٌ مِنَ المُتَصَفِّح. وكانَ
+      //   الرَمزُ يَرفَعُ `playFailed` عَلَيهِ رَفعاً **دائِماً**، فَيَسقُطُ التَصديرُ
+      //   كُلُّهُ إلى النَقلِ إطاراً بِإطار: خَلفيّةٌ بِـ9.8 إطار/ث بَدَلَ 30،
+      //   و757 إعادةَ مُزامَنةٍ في مَقطَعٍ واحِد (كَما في تَقريرِ المُستَخدِم).
+      //   المَنعُ الحَقيقيُّ اسمُهُ NotAllowedError وَحدَه.
+      const name = (e && e.name) || "";
+      if (name === "NotAllowedError" || name === "NotSupportedError") {
+        st.playFailed = true;
+        console.warn("[V2] المُتَصَفِّحُ مَنَعَ تَشغيلَ خَلفيّةِ الفيديو — العَودةُ إلى النَقل:", e && e.message);
+      } else {
+        // AbortError وأَمثالُه: عارِضٌ. أَعِدِ المُحاوَلةَ في الإطارِ التالي.
+        st.playAborts = (st.playAborts || 0) + 1;
+        if (st.playAborts >= 12) {
+          st.playFailed = true;     // تَكَرَّرَ كَثيراً ⇒ لا جَدوى
+          console.warn("[V2] تَعَذَّرَ تَثبيتُ تَشغيلِ الخَلفيّة — العَودةُ إلى النَقل");
+        }
+      }
+    }
+  }
+}
+
 // ── فحص دعم WebCodecs والمكسرات ──────────────────────
 function isWebCodecsSupported() {
   return typeof VideoEncoder !== "undefined"
@@ -133,7 +260,15 @@ async function mixAudioToBufferWeb({
       starts.push(cum);
       cum += Math.max(0.1, (bgVidAudioItems[i].dur || 0) - xf);
     }
-    const cycleDur = cum + xf;  // المدة الكلية للدورة كاملة
+    // v1.3.0 — لُحمةُ الحَلقة: إن لَحَمَتِ الصورةُ دَورَتَها وَجَبَ أَن يَلحَمَ
+    //   الصَوتُ مِثلَها، وإلّا انحَرَفا بِـxf في كُلِّ لَفّة. الدَورةُ المَلحومةُ
+    //   أَقصَرُ بِـxf وتَبدَأُ مُتَقَدِّمةً بِـxf (أَوَّلُ xf مِنَ المَقطَعِ الأَوَّلِ
+    //   لا تُسمَعُ في اللَفّةِ الأولى كَما لا تُرى).
+    const _seamPlan = (typeof bgLoopSeamWeb === "function")
+      ? bgLoopSeamWeb(bgVidAudioItems.map(it => it.dur || 0), xf, totalDuration)
+      : { seam: false };
+    const cycleDur = _seamPlan.seam ? cum : (cum + xf);  // المدة الكلية للدورة كاملة
+    const seamShift = _seamPlan.seam ? -xf : 0;
 
     // كرّر الـ playlist حتى تغطّي totalDuration
     let cycleStart = 0;
@@ -142,7 +277,9 @@ async function mixAudioToBufferWeb({
       for (let i = 0; i < bgVidAudioItems.length; i++) {
         const it = bgVidAudioItems[i];
         if (!it.buffer) continue;   // v1.2 — تَخَطّى المَقاطع الصامِتة لكنّ مَواضِعها مَحفوظة
-        const startTime = cycleStart + starts[i];
+        let startTime = cycleStart + starts[i] + seamShift;
+        let headCut = 0;
+        if (startTime < 0) { headCut = -startTime; startTime = 0; }
         if (startTime >= totalDuration) break;
         const src = oac.createBufferSource();
         src.buffer = it.buffer;
@@ -150,8 +287,9 @@ async function mixAudioToBufferWeb({
         gain.gain.value = it.gain ?? 0.5;
         src.connect(gain); gain.connect(oac.destination);
         // v1.2 — trimStart offset في القراءة من الـbuffer
-        const bufOffset = it.trimStart || 0;
-        const bufDur = Math.min(it.buffer.duration - bufOffset, it.dur || it.buffer.duration);
+        const bufOffset = Math.max(0, Math.min((it.trimStart || 0) + headCut, it.buffer.duration));
+        const bufDur = Math.min(it.buffer.duration - bufOffset,
+                                Math.max(0, (it.dur || it.buffer.duration) - headCut));
         const remaining = totalDuration - startTime;
         const playDur = Math.max(0, Math.min(bufDur, remaining));
         if (playDur > 0) src.start(startTime, bufOffset, playDur);
@@ -285,7 +423,18 @@ function precomputeWaveDataForExport(mixed, totalFrames, FPS) {
 //   وينتهي عند start(i) + D[i]
 //   يَتَزامَن مَع بَداية clip i+1 عند start(i) + D[i] − xf (نافذة الـxfade)
 //   cycleDur = ΣD − (N−1)·xf
-function getBgClipAtTimeWeb(t, clipDurations, xf) {
+// v1.3.0 — لُحمةُ الحَلقة: قَرارٌ واحِدٌ يَستَعمِلُهُ الصَوتُ والصورةُ مَعاً
+//   حَتّى لا يَنفَرِدَ أَحَدُهُما بِدَورةٍ أَطوَلَ فَيَنحَرِفا.
+function bgLoopSeamWeb(clipDurations, xf, totalDuration) {
+  const N = Array.isArray(clipDurations) ? clipDurations.length : 0;
+  const sum = N ? clipDurations.reduce((a, b) => a + (parseFloat(b) || 0), 0) : 0;
+  const cycle = sum - (N - 1) * xf;                 // الدَورةُ الخَطّيّة
+  const willLoop = (typeof totalDuration === "number") && totalDuration > cycle + 0.05;
+  const seam = !!(N >= 2 && xf > 0 && willLoop && cycle > 2.5 * xf);
+  return { seam, cycle, loopDur: seam ? cycle - xf : cycle };
+}
+
+function getBgClipAtTimeWeb(t, clipDurations, xf, totalDuration) {
   const N = clipDurations.length;
   if (N === 0) return null;
   if (N === 1) {
@@ -293,28 +442,58 @@ function getBgClipAtTimeWeb(t, clipDurations, xf) {
     if (!(dur > 0)) return { clipIndex: 0, localTime: 0, inXfade: false, nextClipIndex: -1, nextLocalTime: 0, xfadeAlpha: 0 };
     return { clipIndex: 0, localTime: t % dur, inXfade: false, nextClipIndex: -1, nextLocalTime: 0, xfadeAlpha: 0 };
   }
-  const totalCycle = clipDurations.reduce((a, b) => a + b, 0) - (N - 1) * xf;
-  if (totalCycle > 0 && t >= totalCycle) t = t % totalCycle;
 
-  let cum = 0;
-  for (let i = 0; i < N; i++) {
-    const clipEnd = cum + clipDurations[i];
-    if (t < clipEnd) {
-      const localTime = t - cum;
-      const remaining = clipEnd - t;
-      const inXfade = (remaining <= xf && i < N - 1 && xf > 0);
-      let nextClipIndex = -1, nextLocalTime = 0, xfadeAlpha = 0;
-      if (inXfade) {
-        nextClipIndex = i + 1;
-        const nextStart = cum + clipDurations[i] - xf;
-        nextLocalTime = Math.max(0, t - nextStart);
-        xfadeAlpha = Math.max(0, Math.min(1, 1 - remaining / xf));
+  // مَوضِعٌ في التَسَلسُلِ الخَطّيّ [0, cycle) — بِلا لَفّ
+  const resolveLinear = (x) => {
+    let cum = 0;
+    for (let i = 0; i < N; i++) {
+      const clipEnd = cum + clipDurations[i];
+      if (x < clipEnd) {
+        const localTime = x - cum;
+        const remaining = clipEnd - x;
+        const inXfade = (remaining <= xf && i < N - 1 && xf > 0);
+        let nextClipIndex = -1, nextLocalTime = 0, xfadeAlpha = 0;
+        if (inXfade) {
+          nextClipIndex = i + 1;
+          const nextStart = cum + clipDurations[i] - xf;
+          nextLocalTime = Math.max(0, x - nextStart);
+          xfadeAlpha = Math.max(0, Math.min(1, 1 - remaining / xf));
+        }
+        return { clipIndex: i, localTime, inXfade, nextClipIndex, nextLocalTime, xfadeAlpha };
       }
-      return { clipIndex: i, localTime, inXfade, nextClipIndex, nextLocalTime, xfadeAlpha };
+      cum += clipDurations[i] - xf;
     }
-    cum += clipDurations[i] - xf;
+    return { clipIndex: N - 1, localTime: clipDurations[N-1] || 0, inXfade: false, nextClipIndex: -1, nextLocalTime: 0, xfadeAlpha: 0 };
+  };
+
+  const plan = bgLoopSeamWeb(clipDurations, xf, totalDuration);
+
+  // ══ v1.3.0 — عَطَب #3: العَودةُ مِن آخِرِ مَقطَعٍ إلى أَوَّلِهِ كانَت قَطعاً حادّاً
+  //   الاِنتِقالاتُ بَينَ المَقاطِعِ كانَت مَمزوجةً، أمّا لَفُّ القائِمةِ — ويَقَعُ
+  //   كُلَّما طالَتِ التِلاوةُ عَن مَجموعِ المَقاطِع — فَكانَ يَقفِزُ قَفزاً.
+  //   الآنَ الدَورةُ مَلحومة: مُدَّتُها (cycle − xf)، تَبدَأُ عِندَ xf مِنَ المَقطَعِ
+  //   الأَوَّلِ ويَذوبُ آخِرُ مَقطَعٍ في أَوَّلِهِ عِندَ نِهايَتِها. وهذا مُطابِقٌ
+  //   حَرفيّاً لِما يَبنيهِ ffmpeg في نُسخةِ سَطحِ المَكتَب (`extract-bg-frames`).
+  if (plan.seam) {
+    const L = plan.loopDur;                     // = cycle − xf
+    let tau = t % L;
+    if (tau < 0) tau += L;
+    const bodyEnd = L - xf;                     // = cycle − 2·xf
+    if (tau < bodyEnd) return resolveLinear(tau + xf);
+    const a = (tau - bodyEnd) / xf;             // 0 → 1
+    return {
+      clipIndex: N - 1,
+      localTime: Math.max(0, (clipDurations[N - 1] || 0) - xf + (tau - bodyEnd)),
+      inXfade: true,
+      nextClipIndex: 0,
+      nextLocalTime: tau - bodyEnd,
+      xfadeAlpha: Math.max(0, Math.min(1, a)),
+    };
   }
-  return { clipIndex: N - 1, localTime: clipDurations[N-1] || 0, inXfade: false, nextClipIndex: -1, nextLocalTime: 0, xfadeAlpha: 0 };
+
+  let x = t;
+  if (plan.cycle > 0 && x >= plan.cycle) x = x % plan.cycle;
+  return resolveLinear(x);
 }
 
 async function startWebExportV2(opts) {
@@ -325,6 +504,7 @@ async function startWebExportV2(opts) {
     bgVideo,                  // HTMLVideoElement لخلفية الفيديو (يحتاج seek)
     codecKey, videoBitrate, audioBitrate,
     onProgress, cancelRef,
+    saveTarget,               // v3.5 — وِجهةُ حَفظٍ مَحجوزةٌ بِإيماءةِ المُستَخدِم
   } = opts;
 
   if (!isWebCodecsSupported()) {
@@ -501,24 +681,38 @@ async function startWebExportV2(opts) {
     S.bgVidFadeProgress = 0;
   }
 
+  // v3.5 — مُزامَنةُ الخَلفيّةِ بِالتَشغيلِ لا بِالنَقل (انظُر الكُتلةَ أَعلاه).
+  //   يُشَغَّلُ افتِراضيّاً ويَسقُطُ إلى النَقلِ تِلقائيّاً إن مَنَعَ المُتَصَفِّحُ
+  //   التَشغيلَ أَو لَم يَتَقَدَّمِ الفيديو.
+  const bgFast = (typeof ge === "function") ? (ge("export-bg-fast") !== false) : true;
+  const bgSync = createBgPlaybackSync();
+  const tStartMs = performance.now();
+
   for (let i = 0; i < totalFrames; i++) {
     if (cancelRef?.canceled) break;
     const t = i / FPS;
 
     // v1.2 Bug#1 — deterministic seek لِمَقطع(مَقاطع) الخَلفيّة
     if (visibleBgClips.length) {
-      const cinfo = getBgClipAtTimeWeb(t, bgClipDurations, bgXf);
+      const cinfo = getBgClipAtTimeWeb(t, bgClipDurations, bgXf, totalDuration);
       if (cinfo) {
         S.bgVid = visibleBgClips[cinfo.clipIndex].vid;
         const seekPos = bgClipTrimStarts[cinfo.clipIndex] + cinfo.localTime;
-        await seekVideoToTimeWeb(S.bgVid, seekPos);
+        if (bgFast) {
+          const wallSec = (performance.now() - tStartMs) / 1000;
+          await syncBgByPlayback(bgSync, S.bgVid, seekPos, cinfo.clipIndex, t, wallSec);
+        } else {
+          await seekVideoToTimeWeb(S.bgVid, seekPos);
+        }
         if (cinfo.inXfade) {
           S.bgVidNext = visibleBgClips[cinfo.nextClipIndex].vid;
           const nextSeekPos = bgClipTrimStarts[cinfo.nextClipIndex] + cinfo.nextLocalTime;
+          // المَقطَعُ التالي يُنقَلُ نَقلاً: ظُهورُهُ قَصيرٌ ولا يَستَحِقُّ تَشغيلاً مُوازِياً
           await seekVideoToTimeWeb(S.bgVidNext, nextSeekPos);
           const ease = (typeof easeInOutCubic === "function") ? easeInOutCubic : (x => x);
           S.bgVidFadeProgress = ease(cinfo.xfadeAlpha);
         } else {
+          if (S.bgVidNext) { try { S.bgVidNext.pause(); } catch (_) {} }
           S.bgVidNext = null;
           S.bgVidFadeProgress = 0;
         }
@@ -545,8 +739,12 @@ async function startWebExportV2(opts) {
     videoFrame.close();
 
     // backpressure — لا تترك الطابور يكبر بلا حدود
+    // v3.5 — MessageChannel لا setTimeout: المُتَصَفِّحُ يَخنُقُ المُؤَقِّتاتِ إلى
+    //   نِداءٍ كُلَّ ثانِيةٍ حينَ تُخفى الصَفحة، فَكانَ التَصديرُ يَهبِطُ إلى
+    //   ~إطارٍ في الثانِيةِ بِمُجَرَّدِ تَبديلِ التَبويبِ أَو إطفاءِ الشاشة.
     if (videoEncoder.encodeQueueSize > 8) {
-      await new Promise(r => setTimeout(r, 5));
+      if (window.PIO && window.PIO.yieldToBrowser) await window.PIO.yieldToBrowser();
+      else await new Promise(r => setTimeout(r, 5));
     }
 
     const now = performance.now();
@@ -566,9 +764,10 @@ async function startWebExportV2(opts) {
   S.bgVidFadeProgress  = savedBgFadeProg;
   S._exportWaveData = null;   // عد إلى analyser/synthetic للمعاينة
   S._exportingV2 = false;
-  // أَوقِف كُلّ فيديوهات الخَلفيّة (كانت مُسَلَّمة للـseek)
+  // أَوقِف كُلّ فيديوهات الخَلفيّة (كانت مُسَلَّمة للـseek/التَشغيل)
+  //   v3.5 — وأَعِد سُرعةَ التَشغيلِ إلى 1، وإلّا بَقِيَت المُعاينةُ بِسُرعةِ التَصدير
   for (const it of (S.bgVidItems || [])) {
-    try { it.vid.pause(); } catch (_) {}
+    try { it.vid.pause(); it.vid.playbackRate = 1; } catch (_) {}
   }
 
   if (cancelRef?.canceled) {
@@ -588,15 +787,27 @@ async function startWebExportV2(opts) {
   const buffer = muxer.target.buffer;
   const mime = (fmt.muxer === "mp4") ? "video/mp4" : "video/webm";
   const blob = new Blob([buffer], { type: mime });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `GT-SQR_${Date.now()}.${fmt.ext}`;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  const fname = `GT-SQR_${Date.now()}.${fmt.ext}`;
+
+  // v3.5 — طَبَقةُ التَسليم: تَكتُبُ في المَوضِعِ الذي حَجَزَهُ المُستَخدِمُ إن
+  //   وُجِد، وإلّا تَنزيلُ المُتَصَفِّح. `<a download>` وَحدَهُ يَفشَلُ صامِتاً في
+  //   وَضعِ PWA المُستَقِلّ فَيَضيعُ عَمَلُ ساعةٍ بِلا أَثَرٍ ولا رِسالة.
+  let delivered = null;
+  if (window.PIO) {
+    delivered = await window.PIO.deliverFile(blob, fname, mime, { target: saveTarget });
+  } else {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    delivered = { method: "download", path: fname };
+  }
+  if (!delivered) throw new Error("تَعَذَّرَ حِفظُ الناتِج — راجِع سِجِلَّ الحَفظ");
 
   onProgress(100, "✅ اكتمل التصدير!");
-  return { ok: true, size: buffer.byteLength };
+  return { ok: true, size: buffer.byteLength, blob, filename: fname, mime, delivered };
 }
 
 function formatTime(s) {
